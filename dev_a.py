@@ -3,7 +3,7 @@ from math import fabs
 import screen_brightness_control as sbc
 import numpy as np
 import tkinter as tk
-import cv2
+import cv2  # TODO: Стоит отказаться от CV2 для упаковки в .EXE файл
 import os
 import time
 import yaml

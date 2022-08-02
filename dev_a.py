@@ -9,7 +9,9 @@ import time
 import yaml
 import notification
 
-
+"""
+    ЭТО НАСТРОЙКИ ПО УМОЛЧАНИЮ, ИХ ИЗМЕНЯТЬ НЕ СТОИТ
+"""
 settings_version = 0
 settings = {
     "settings_version": settings_version,

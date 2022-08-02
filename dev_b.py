@@ -25,17 +25,23 @@ title = "Waba (v.Dev_B)"
     Defaults
 """
 # Default settings values
-settings_version = 1
+settings_version = 2
 settings = {
     "settings_version": settings_version,
+    # tray
+    "hiding_to_tray": True,
     "hide_after_start": False,
+    "im_hiding_message": True,
     "notifications": True,
+    # display
     "device": "<video0>",
     "display": sbc.list_monitors()[0],
+    # snapshot
     "snapshot_delay": 0,
     "amount_of_shots": 1,
+    # math
     "do_use_custom_method": False,
-    "module_method": None,
+    "module_method": "",
 }
 
 """
@@ -189,16 +195,15 @@ def main():
     right_side_frame = tk.Frame(top_frame)
     ...
 
-    def check():
-        # обманка
-        ...
-
     def submit(*_):
         # settings["hide_after_start"] =
         ...
+        settings["hiding_to_tray"] = hiding_to_tray_chbtn_var.get()
         settings["hide_after_start"] = hiding_when_start_chbtn_var.get()
         settings["notifications"] = notifications_chbtn_var.get()
         settings["snapshot_delay"] = spinbox_shot_delay_var.get()
+        settings["do_use_custom_method"] = do_use_custom_method_chbtn_var.get()
+        settings["module_method"] = entry_custom_func_var.get()
         save_settings()
         check()
 
@@ -210,30 +215,57 @@ def main():
         relief=tk.GROOVE,
     )
     ...
+    hiding_to_tray_chbtn_var = tk.BooleanVar()
+    hiding_to_tray_chbtn_var.set(settings["hiding_to_tray"])
     hiding_when_start_chbtn_var = tk.BooleanVar()
     hiding_when_start_chbtn_var.set(settings["hide_after_start"])
     notifications_chbtn_var = tk.BooleanVar()
     notifications_chbtn_var.set(settings["notifications"])
     spinbox_shot_delay_var = tk.IntVar()
     spinbox_shot_delay_var.set(settings["snapshot_delay"])
+    do_use_custom_method_chbtn_var = tk.BooleanVar()
+    do_use_custom_method_chbtn_var.set(settings["do_use_custom_method"])
+    entry_custom_func_var = tk.StringVar()
+    entry_custom_func_var.set(settings["module_method"])
     ...
-
-    del check
 
     def check():
         changes = 0
+        changes += int(hiding_to_tray_chbtn_var.get() != settings["hiding_to_tray"])
         changes += int(hiding_when_start_chbtn_var.get() != settings["hide_after_start"])
         changes += int(notifications_chbtn_var.get() != settings["notifications"])
         changes += int(spinbox_shot_delay_var.get() != settings["snapshot_delay"])
+        changes += int(do_use_custom_method_chbtn_var.get() != settings["do_use_custom_method"])
+        changes += int(entry_custom_func_var.get() != settings["module_method"])
         if changes == 0:
             submit_button.config(state="disabled")
             main_window.update()
         else:
             submit_button.config(state="active")
             main_window.update()
+        check_two()
         ...
 
     ...
+    waba_title_image = tk.PhotoImage(file="waba_title.png")
+    waba_image = tk.Label(
+        left_side_frame,
+        image=waba_title_image,
+        state="active",
+    )
+    waba_image.image_ref = waba_title_image
+    waba_image.pack()
+
+    hiding_to_tray_chbtn = tk.Checkbutton(
+        left_side_frame,
+        text="Сворачивать в трей",
+        padx=10,
+        anchor="w",
+        command=check,
+        variable=hiding_to_tray_chbtn_var
+    )
+    hiding_to_tray_chbtn.pack(fill=tk.X)
+
     hiding_when_start_chbtn = tk.Checkbutton(
         left_side_frame,
         text="Запускать свёрнутым",
@@ -272,9 +304,28 @@ def main():
     spinbox_shot_delay.pack(fill=tk.X)
 
     ...
+    do_use_custom_func_chbtn = tk.Checkbutton(
+        right_side_frame,
+        text="Своя функция",
+        anchor="w",
+        command=check,
+        variable=do_use_custom_method_chbtn_var,
+    )
+    do_use_custom_func_chbtn.pack(fill=tk.X)
+
+    # def validate_func(func):
+    #    check()
+    #    print(func)
+    #    return True
+    entry_custom_func = tk.Entry(
+        right_side_frame,
+        textvariable=entry_custom_func_var,
+    )
+    entry_custom_func.pack(fill=tk.X)
+    ...
     tk.Label(
         top_frame,
-        text="Waba v.Dev_B (debug)   |   by @kapertdog with 💕",
+        text="v.Dev_B (debug)   |   made with 💕",
         foreground="gray"
     ).pack(side=tk.BOTTOM)
     ...
@@ -298,21 +349,26 @@ def main():
     ...
     submit_button.pack(side=tk.RIGHT)
     ...
+
+    def check_two():
+        if do_use_custom_method_chbtn_var.get():
+            entry_custom_func.config(state="normal")
+        else:
+            entry_custom_func.config(state="disabled")
+        ...
+    ...
     left_side_frame.pack(side=tk.LEFT, fill=tk.BOTH)
     right_side_frame.pack(side=tk.LEFT, fill=tk.BOTH)
     top_frame.pack(fill=tk.X)
     bottom_frame.pack(side=tk.BOTTOM, fill=tk.X)
     ...
     # main_window.geometry("400x250")
-    main_window.geometry("310x125")
+    main_window.geometry("310x200")
     main_window.resizable(width=False, height=False)
     ...
 
     def show_window():
         main_window.after(0, main_window.deiconify)
-
-    def hide_window():
-        main_window.withdraw()
 
     def quit_all(icon: pystray.Icon = None, *_):
         if icon is not None:
@@ -331,11 +387,28 @@ def main():
     sys_icon = pystray.Icon("WABA", PIL.Image.open("settings_brightness_light.png"), title, tray_menu)
     sys_icon.run_detached()
     ...
+
+    def hide_window(anyway: bool = False):
+        if settings["hiding_to_tray"] or anyway:
+            main_window.withdraw()
+            if settings["im_hiding_message"] and settings["notifications"]:
+                sys_icon.notify(
+                    "Это можно выключить в настройках",
+                    "Waba скрылась в трее"
+                )
+                settings["im_hiding_message"] = False
+                save_settings()
+        else:
+            if msb.askyesno("Waba: закрыть приложение",
+                            "Действительно хотите закрыть приложение?"):
+                quit_all(sys_icon)
+    ...
     main_window.protocol('WM_DELETE_WINDOW', hide_window)
     if settings["hide_after_start"]:
-        main_window.after(0, hide_window())
+        main_window.after(0, hide_window(True))
 
     main_window.iconbitmap("logo.ico")
+    main_window.after(0, check)
     main_window.mainloop()
 
 

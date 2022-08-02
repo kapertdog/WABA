@@ -274,13 +274,13 @@ def main():
     ...
     tk.Label(
         top_frame,
-        text="Waba v.Dev_B (8861d5f2)   |   by @kapertdog with 💕",
+        text="Waba v.Dev_B (debug)   |   by @kapertdog with 💕",
         foreground="gray"
     ).pack(side=tk.BOTTOM)
     ...
 
-    def upd_bright():
-        answ = update_brightness()
+    def upd_bright(icon = None, *_):
+        answ = update_brightness(icon)
         print(f"-=- {time.ctime()} -=-\n"
               f"Дисплей: {answ[0]}\n"
               f"Яркость до изменения: {answ[1]}/100%\n"

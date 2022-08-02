@@ -1,4 +1,5 @@
 # WABA (Windows Automatic Brightness Adjustment)
+### Linux? Gnome? Посмотрите форк [GABA](https://github.com/levkopo/GABA) 👀
 Странный, нужный только мне скрипт, подстраивающий яркость дисплея основываясь на данных с камеры
 
 ![image](https://user-images.githubusercontent.com/40202917/180593306-dfec4aef-4c4a-452f-9a47-4588045f531e.png)

@@ -124,7 +124,7 @@ def get_brightness(device: str = "<video0>", wait: int = 0, repeats: int = 1):
 
 
 def calc_custom(value: int, func: str):
-    return eval(func.format({"x": value}))
+    return eval(func.format(value))
 
 
 def calc_value_v1(value: int):
@@ -279,7 +279,7 @@ def main():
     ).pack(side=tk.BOTTOM)
     ...
 
-    def upd_bright(icon = None, *_):
+    def upd_bright(icon=None, *_):
         answ = update_brightness(icon)
         print(f"-=- {time.ctime()} -=-\n"
               f"Дисплей: {answ[0]}\n"
@@ -325,7 +325,7 @@ def main():
     ...
     tray_menu = pystray.Menu(
         pystray.MenuItem("Открыть настройки", show_window, default=True),
-        pystray.MenuItem("Обновить яркость", upd_bright),
+        pystray.MenuItem("Обновить яркость", upd_bright, default=False),
         pystray.MenuItem("Закрыть", quit_all),
     )
     sys_icon = pystray.Icon("WABA", PIL.Image.open("settings_brightness_light.png"), title, tray_menu)

@@ -1,13 +1,19 @@
+# -*- coding: utf-8 -*-
 """
     WABA (Windows automatic brightness adjustment) v.DEV_B
 """
+import os
+import threading
+
 import PIL.Image
 import screen_brightness_control as sbc
 import imageio as iio
 import tkinter as tk
+from tkinter import ttk
 from tkinter import messagebox as msb
 from statistics import mean
 from pathlib import Path
+from autostart import autostart
 import pystray
 import yaml
 import time
@@ -25,9 +31,12 @@ title = "Waba (v.Dev_B)"
     Defaults
 """
 # Default settings values
-settings_version = 2
+settings_version = 3
+settings_path = Path(os.getenv("APPDATA", ""), "waba", "settings.yaml")
 settings = {
     "settings_version": settings_version,
+    "theme": "dark",
+    "autostart": False,
     # tray
     "hiding_to_tray": True,
     "hide_after_start": False,
@@ -35,14 +44,39 @@ settings = {
     "notifications": True,
     # display
     "device": "<video0>",
-    "display": sbc.list_monitors()[0],
+    "display": None,
     # snapshot
-    "snapshot_delay": 0,
+    "cycle_timer": None,
+    "timer_tick_delay": 10,
+    "snapshot_delay": 1,
     "amount_of_shots": 1,
     # math
     "do_use_custom_method": False,
     "module_method": "",
 }
+
+timer_values_of_names = {
+    "30 с.": 30,
+    "1 м.": 60,
+    "5 м.": 300,
+    "10 м.": 600,
+    "15 м.": 900,
+    "30 м.": 1800,
+    "1 ч.": 3600,
+    "": None,
+    "Не обновлять": None,
+    "30 секунд": 30,
+    "1 мин.": 60,
+    "5 мин.": 300,
+    "10 мин.": 600,
+    "15 мин.": 900,
+    "30 мин.": 1800,
+    "1 час": 3600,
+}
+
+timer_names_of_values = dict()
+for key in timer_values_of_names:
+    timer_names_of_values[timer_values_of_names[key]] = key
 
 """
     Settings
@@ -73,28 +107,30 @@ def migrate_settings(data):
     return data
 
 
-def load_settings(settings_path: Path = Path("settings.yaml")):
+def load_settings(path: Path = settings_path):
+    # Path(os.getenv("APPDATA"), "Microsoft", "Window", "Start Menu", "Programs", "Startup")
     global settings
-    if settings_path.exists():
-        with settings_path.open("r+") as s:
+    if path.exists():
+        with path.open("r+") as s:
             data = yaml.safe_load(s)
         if data["settings_version"] != settings_version:
             try:
                 settings = migrate_settings(data)
             except Exception as err:
                 print("# Ошибка при миграции!!", err, "\n# Файл настроек будет перезаписан")
-            with settings_path.open("w+") as s:
+            with path.open("w+") as s:
                 yaml.dump(settings, s, default_flow_style=False)
         else:
             settings = data
     else:
-        with settings_path.open("w+") as s:
+        path.parent.mkdir()
+        with path.open("w+") as s:
             yaml.dump(settings, s, default_flow_style=False)
     return settings
 
 
-def save_settings(settings_path: Path = Path("settings.yaml")):
-    with settings_path.open("w+") as s:
+def save_settings(path: Path = settings_path):
+    with path.open("w+") as s:
         yaml.dump(settings, s, default_flow_style=False)
 
 
@@ -170,6 +206,19 @@ def update_brightness(icon: pystray.Icon = None, *_, method: str = None):
     return d, old_b, cam_b, m_b
 
 
+thread_alive = True
+
+
+def timer_thread(_):
+    last_time = 0
+    while thread_alive:
+        if settings["cycle_timer"]:
+            if int(time.monotonic()) - last_time > settings["cycle_timer"]:
+                update_brightness()
+                last_time = int(time.monotonic())
+        time.sleep(settings["timer_tick_delay"])
+
+
 """
     Interface
 """
@@ -182,6 +231,26 @@ def get_interface():
 """
     Main things
 """
+
+
+def github_page():
+    # with open("about.txt", "r+", encoding="UTF-8") as f:
+    #     about_txt = f.read()
+    # msb.showinfo(
+    #     "Waba: about",
+    #     about_txt
+    # )
+    __import__("webbrowser").open_new_tab(r"https://github.com/kapertdog/WABA")
+
+
+def about():
+    with open("about.txt", "r+", encoding="UTF-8") as f:
+        about_txt = f.read()
+    msb.showinfo(
+        "Waba: about",
+        about_txt
+    )
+    # __import__("webbrowser").open_new_tab(r"https://github.com/kapertdog/WABA")
 
 
 def main():
@@ -198,9 +267,13 @@ def main():
     def submit(*_):
         # settings["hide_after_start"] =
         ...
+        if settings["autostart"] != autostart_chbtn_var.get():
+            settings["autostart"] = autostart(autostart_chbtn_var.get())
         settings["hiding_to_tray"] = hiding_to_tray_chbtn_var.get()
         settings["hide_after_start"] = hiding_when_start_chbtn_var.get()
         settings["notifications"] = notifications_chbtn_var.get()
+        settings["cycle_timer"] = timer_values_of_names[update_rate_lst_var.get()]
+        settings["display"] = display_list_var.get()
         settings["snapshot_delay"] = spinbox_shot_delay_var.get()
         settings["do_use_custom_method"] = do_use_custom_method_chbtn_var.get()
         settings["module_method"] = entry_custom_func_var.get()
@@ -216,27 +289,42 @@ def main():
     )
     ...
     hiding_to_tray_chbtn_var = tk.BooleanVar()
-    hiding_to_tray_chbtn_var.set(settings["hiding_to_tray"])
     hiding_when_start_chbtn_var = tk.BooleanVar()
-    hiding_when_start_chbtn_var.set(settings["hide_after_start"])
     notifications_chbtn_var = tk.BooleanVar()
-    notifications_chbtn_var.set(settings["notifications"])
+    autostart_chbtn_var = tk.BooleanVar()
+    update_rate_lst_var = tk.StringVar()
+    display_list_var = tk.StringVar()
     spinbox_shot_delay_var = tk.IntVar()
-    spinbox_shot_delay_var.set(settings["snapshot_delay"])
     do_use_custom_method_chbtn_var = tk.BooleanVar()
-    do_use_custom_method_chbtn_var.set(settings["do_use_custom_method"])
     entry_custom_func_var = tk.StringVar()
-    entry_custom_func_var.set(settings["module_method"])
+
+    def update():
+        hiding_to_tray_chbtn_var.set(settings["hiding_to_tray"])
+        hiding_when_start_chbtn_var.set(settings["hide_after_start"])
+        notifications_chbtn_var.set(settings["notifications"])
+        autostart_chbtn_var.set(settings["autostart"])
+        display_list_var.set(settings["display"])
+        update_rate_lst_var.set(timer_names_of_values[settings["cycle_timer"]])
+        spinbox_shot_delay_var.set(settings["snapshot_delay"])
+        do_use_custom_method_chbtn_var.set(settings["do_use_custom_method"])
+        entry_custom_func_var.set(settings["module_method"])
+    update()
     ...
 
     def check():
         changes = 0
-        changes += int(hiding_to_tray_chbtn_var.get() != settings["hiding_to_tray"])
-        changes += int(hiding_when_start_chbtn_var.get() != settings["hide_after_start"])
-        changes += int(notifications_chbtn_var.get() != settings["notifications"])
-        changes += int(spinbox_shot_delay_var.get() != settings["snapshot_delay"])
-        changes += int(do_use_custom_method_chbtn_var.get() != settings["do_use_custom_method"])
-        changes += int(entry_custom_func_var.get() != settings["module_method"])
+        try:
+            changes += int(hiding_to_tray_chbtn_var.get() != settings["hiding_to_tray"])
+            changes += int(hiding_when_start_chbtn_var.get() != settings["hide_after_start"])
+            changes += int(notifications_chbtn_var.get() != settings["notifications"])
+            changes += int(autostart_chbtn_var.get() != settings["autostart"])
+            changes += int(timer_values_of_names[update_rate_lst_var.get()] != settings["cycle_timer"])
+            changes += int(display_list_var.get() != settings["display"])
+            changes += int(spinbox_shot_delay_var.get() != settings["snapshot_delay"])
+            changes += int(do_use_custom_method_chbtn_var.get() != settings["do_use_custom_method"])
+            changes += int(entry_custom_func_var.get() != settings["module_method"])
+        except Exception as err:
+            msb.showerror("Waba: сбой при проверке настроек", f"{err}")
         if changes == 0:
             submit_button.config(state="disabled")
             main_window.update()
@@ -286,6 +374,60 @@ def main():
     )
     notifications_chbtn.pack(fill=tk.X)
 
+    autostart_chbtn = tk.Checkbutton(
+        left_side_frame,
+        text="Автозапуск",
+        padx=10,
+        anchor="w",
+        command=check,
+        variable=autostart_chbtn_var
+    )
+    autostart_chbtn.pack(fill=tk.X)
+    ...
+    lbl_update_rate_lst = tk.Label(
+        right_side_frame,
+        text="Обновлять каждые:",
+        padx=10,
+        anchor="w",
+    )
+    lbl_update_rate_lst.pack(fill=tk.X)
+
+    update_rate_lst = ttk.Combobox(
+        right_side_frame,
+        postcommand=check,
+        validatecommand=check,
+        invalidcommand=check,
+        textvariable=update_rate_lst_var,
+        values=[
+            "Не обновлять",
+            "30 секунд",
+            "1 мин.",
+            "5 мин.",
+            "10 мин.",
+            "15 мин.",
+            "30 мин.",
+            "1 час"
+        ]
+    )
+    update_rate_lst.pack(fill=tk.X)
+
+    lbl_display_lst = tk.Label(
+        right_side_frame,
+        text="Дисплей:",
+        padx=10,
+        anchor="w"
+    )
+    lbl_display_lst.pack(fill=tk.X)
+
+    display_lst = ttk.Combobox(
+        right_side_frame,
+        postcommand=check,
+        textvariable=display_list_var,
+        values=sbc.list_monitors(),
+        validate="key",
+    )
+    display_lst.pack(fill=tk.X)
+
     lbl_shot_delay = tk.Label(
         right_side_frame,
         text="Задержка кадра: ",
@@ -331,7 +473,12 @@ def main():
     ...
 
     def upd_bright(icon=None, *_):
-        answ = update_brightness(icon)
+        # subprocess.run(update_brightness, input=icon)
+        try:
+            answ = update_brightness(icon)
+        except Exception as err:
+            msb.showerror("Waba: сбой", f"{err}")
+            return
         print(f"-=- {time.ctime()} -=-\n"
               f"Дисплей: {answ[0]}\n"
               f"Яркость до изменения: {answ[1]}/100%\n"
@@ -363,29 +510,82 @@ def main():
     bottom_frame.pack(side=tk.BOTTOM, fill=tk.X)
     ...
     # main_window.geometry("400x250")
-    main_window.geometry("310x200")
+    main_window.geometry("310x235")
     main_window.resizable(width=False, height=False)
     ...
 
     def show_window():
         main_window.after(0, main_window.deiconify)
+        check()
 
     def quit_all(icon: pystray.Icon = None, *_):
-        if icon is not None:
-            icon.stop()
-        main_window.deiconify()
-        main_window.quit()
+        def q():
+            if icon is not None:
+                icon.stop()
+            main_window.deiconify()
+            main_window.quit()
+            global thread_alive
+            thread_alive = False
+            thread.join()
+
+        import loading_screen
+        loading_screen.processing(q, "Waba: Завершение работы", "Выходим...")
         # exit(0)
         ...
 
+    def set_timer(_, MenuItem: pystray.MenuItem):
+        print("-- update_tray")
+        global settings
+        settings["cycle_timer"] = timer_values_of_names[MenuItem.text]
+        # match MenuItem.text:
+        #    case "Не обновлять":
+        #        settings["cycle_timer"] = None
+        #    case "30 c.":
+        #        settings["cycle_timer"] = 30
+        #    case "1 м.":
+        #        settings["cycle_timer"] = 60
+        #    case "5 м.":
+        #        settings["cycle_timer"] = 300
+        #    case "10 м.":
+        #        settings["cycle_timer"] = 600
+        #    case "15 м.":
+        #        settings["cycle_timer"] = 900
+        #    case "30 м.":
+        #        settings["cycle_timer"] = 1800
+        #    case "1 ч.":
+        #        settings["cycle_timer"] = 3600
+        save_settings()
+        update()
+        check()
+
+    def autostart_checkbox(*_):
+        settings["autostart"] = autostart(not settings["autostart"])
+        save_settings()
+        update()
+        check()
     ...
     tray_menu = pystray.Menu(
         pystray.MenuItem("Открыть настройки", show_window, default=True),
         pystray.MenuItem("Обновить яркость", upd_bright, default=False),
+        pystray.MenuItem("Обновлять раз в:", pystray.Menu(
+                pystray.MenuItem("Не обновлять", set_timer, lambda item: settings["cycle_timer"] is None, radio=True),
+                pystray.MenuItem("30 c.", set_timer, lambda item: settings["cycle_timer"] == 30, radio=True),
+                pystray.MenuItem("1 м.", set_timer, lambda item: settings["cycle_timer"] == 60, radio=True),
+                pystray.MenuItem("5 м.", set_timer, lambda item: settings["cycle_timer"] == 300, radio=True),
+                pystray.MenuItem("10 м.", set_timer, lambda item: settings["cycle_timer"] == 600, radio=True),
+                pystray.MenuItem("15 м.", set_timer, lambda item: settings["cycle_timer"] == 900, radio=True),
+                pystray.MenuItem("30 м.", set_timer, lambda item: settings["cycle_timer"] == 1800, radio=True),
+                pystray.MenuItem("1 ч.", set_timer, lambda item: settings["cycle_timer"] == 3600, radio=True),
+        )),
+        pystray.MenuItem("Автозапуск", autostart_checkbox, lambda item: settings["autostart"]),
+        pystray.MenuItem("GitHub", github_page),
         pystray.MenuItem("Закрыть", quit_all),
     )
-    sys_icon = pystray.Icon("WABA", PIL.Image.open("settings_brightness_light.png"), title, tray_menu)
+    sys_icon = pystray.Icon("WABA", PIL.Image.open("settings_brightness.png"), title, tray_menu)
     sys_icon.run_detached()
+
+    thread = threading.Thread(target=timer_thread, args=(sys_icon, ))
+    thread.start()
     ...
 
     def hide_window(anyway: bool = False):
@@ -404,10 +604,11 @@ def main():
                 quit_all(sys_icon)
     ...
     main_window.protocol('WM_DELETE_WINDOW', hide_window)
+    # noinspection PyUnboundLocalVariable
     if settings["hide_after_start"]:
         main_window.after(0, hide_window(True))
 
-    main_window.iconbitmap("logo.ico")
+    main_window.iconbitmap("logo2.ico")
     main_window.after(0, check)
     main_window.mainloop()
 
@@ -417,9 +618,10 @@ def main():
 """
 
 if __name__ == "__main__":
-    if len(sbc.get_brightness()) == 0:
+    displays = sbc.list_monitors()
+    if len(displays) == 0:
         debug_window = tk.Tk()
-        debug_window.iconbitmap("logo.ico")
+        debug_window.iconbitmap("logo2.ico")
         debug_window.withdraw()
         msb.showerror("Waba: Нет мониторов", "Нет данных о мониторах, прерываю запуск.\n"
                                              "\n"
@@ -427,5 +629,7 @@ if __name__ == "__main__":
                       )
         debug_window.quit()
         exit(0)
+    settings["display"] = displays[0]
+    del displays
     load_settings()
     main()

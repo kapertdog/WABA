@@ -28,6 +28,7 @@ screen-brightness-control==0.15.3
 six==1.16.0
 whichcraft==0.6.1
 win10toast==0.9
+winshell==0.6
 WMI==1.5.1
 zope.event==4.5.0
 zope.interface==5.4.0

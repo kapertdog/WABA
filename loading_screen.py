@@ -25,11 +25,11 @@ def do_it_all(*args):
     return q
 
 
-def processing(func):
+def processing(func, title="Waba: Processing", message="Processing..."):
     window = tk.Tk()
-    window.title("Processing...")
-    text = tk.Label(window, text="Processing...", font=200, pady=20, padx=20)
+    window.title(title)
+    text = tk.Label(window, text=message, font=200, pady=20, padx=20)
     text.grid()
     func = do_it_all(func, window.destroy)
-    window.after(200, func)
+    window.after(0, func)
     window.mainloop()

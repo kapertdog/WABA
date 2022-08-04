@@ -25,10 +25,10 @@ def do_it_all(*args):
     return q
 
 
-def processing(func, title="Waba: Processing", message="Processing..."):
+def processing(func, title="Waba: Processing", message="Processing...", fg: str = "black", bg: str = "white"):
     window = tk.Tk()
     window.title(title)
-    text = tk.Label(window, text=message, font=200, pady=20, padx=20)
+    text = tk.Label(window, text=message, font=200, pady=20, padx=20, bg=bg, fg=fg)
     text.grid()
     window.resizable(width=False, height=False)
     window.overrideredirect(True)

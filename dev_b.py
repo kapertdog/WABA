@@ -594,6 +594,7 @@ def main():
                 global thread_alive
                 thread_alive = False
                 thread.join()
+            window.withdraw()
             window.deiconify()
             window.quit()
 

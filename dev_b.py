@@ -19,6 +19,8 @@ import time
 
 title = "Waba (v.Dev_B)"
 version = "0.2.3.7"
+github_tag = "dev_b_pre-3"
+edition = "venv"  # Всего 3 издания: "venv", "folder" и "exe"
 
 # camera = iio.get_reader("<video0>")
 # screenshot = camera.get_data(0)
@@ -533,7 +535,7 @@ def main():
     ...
     tk.Label(
         top_frame,
-        text="v.Dev_B (debug)   |   made with 💕",
+        text=f"v.Dev_B ({version})   |   made with 💕",
         foreground="gray"
     ).pack(side=tk.BOTTOM)
     ...

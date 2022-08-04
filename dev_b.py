@@ -4,7 +4,6 @@
 """
 import os
 import threading
-
 import PIL.Image
 import screen_brightness_control as sbc
 import imageio as iio
@@ -19,6 +18,7 @@ import yaml
 import time
 
 title = "Waba (v.Dev_B)"
+version = "0.2.3.7"
 
 # camera = iio.get_reader("<video0>")
 # screenshot = camera.get_data(0)
@@ -395,7 +395,7 @@ def main():
         ...
 
     ...
-    waba_title_image = tk.PhotoImage(file="waba_title.png")
+    waba_title_image = tk.PhotoImage(file="resources/waba_title.png")
     waba_image = tk.Label(
         left_side_frame,
         image=waba_title_image,
@@ -648,7 +648,7 @@ def main():
             pystray.MenuItem("GitHub", github_page),
             pystray.MenuItem("Закрыть", quit_all),
         )
-        sys_icon = pystray.Icon("WABA", PIL.Image.open("settings_brightness.png"), title, tray_menu)
+        sys_icon = pystray.Icon("WABA", PIL.Image.open("resources/settings_brightness.png"), title, tray_menu)
         sys_icon.run_detached()
     else:
         sys_icon = None

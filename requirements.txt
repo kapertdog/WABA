@@ -1,6 +1,6 @@
 altgraph==0.17.2
-auto-py-to-exe==2.21.0
-bottle==0.12.21
+auto-py-to-exe==2.21.1
+bottle==0.12.23
 bottle-websocket==0.2.9
 cffi==1.15.1
 Eel==0.14.0

@@ -1,13 +1,11 @@
 # -*- coding: utf-8 -*-
 from pathlib import Path
-from winshell import CreateShortcut, programs
-from os import remove, getenv
 
 
 def autostart(switch: bool = True):
     match switch:
         case True:
-
+            from winshell import CreateShortcut, programs
             startup_program_files = Path(programs(), "Startup",  "Waba.lnk")
             CreateShortcut(
                 Path=str(startup_program_files),
@@ -15,6 +13,7 @@ def autostart(switch: bool = True):
             )
             return True
         case False:
+            from os import remove, getenv
             remove(
                 Path(
                     getenv("APPDATA"),

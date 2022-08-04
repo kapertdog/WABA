@@ -31,12 +31,22 @@ title = "Waba (v.Dev_B)"
     Defaults
 """
 # Default settings values
-settings_version = 3
+settings_version = 4
 settings_path = Path(os.getenv("APPDATA", ""), "waba", "settings.yaml")
 settings = {
+    "_venv_dir": os.getcwd(),
     "settings_version": settings_version,
     "theme": "dark",
     "autostart": False,
+    # features
+    "features": {
+        # Обновляются только после перезапуска!!
+        "autostart": True,
+        "custom_icons": True,  # Пока ничего не делает
+        "threading": True,
+        "notifications": True,
+        "tray": True,
+    },
     # tray
     "hiding_to_tray": True,
     "hide_after_start": False,
@@ -53,6 +63,50 @@ settings = {
     # math
     "do_use_custom_method": False,
     "module_method": "",
+}
+
+# Потом по желанию сокращу
+features_values_of_switches = {
+    "autostart": {
+        True: {
+            "tray": True,
+            "tkinter": "normal",
+        },
+        False: {
+            "tray": False,
+            "tkinter": "disabled",
+        }
+    },
+    "notifications": {
+        True: {
+            "tkinter": "normal",
+        },
+        False: {
+            "tkinter": "disabled"
+        }
+    },
+    "threading": {
+        True: {
+            "tkinter": "normal",
+            "tray": True,
+            "thread": True,
+        },
+        False: {
+            "tkinter": "disabled",
+            "tray": False,
+            "thread": False
+        }
+    },
+    "tray": {
+        True: {
+            "tkinter": "normal",
+            "main": True
+        },
+        False: {
+            "tkinter": "disabled",
+            "main": False
+        }
+    }
 }
 
 timer_values_of_names = {
@@ -83,6 +137,10 @@ for key in timer_values_of_names:
 """
 
 
+def f_settings(keyword: str, element: str) -> str:
+    return features_values_of_switches[keyword][settings["features"][keyword]][element]
+
+
 def migrate_settings(data):
     def check(old, new):
         ret = dict()
@@ -104,7 +162,13 @@ def migrate_settings(data):
     print("-=- Происходит миграция -=-")
     data = check(data, settings)
     data["settings_version"] = settings_version
+    print("-=-  Успешная миграция  -=-")
     return data
+
+
+def save_settings(path: Path = settings_path):
+    with path.open("w+") as s:
+        yaml.dump(settings, s, default_flow_style=False)
 
 
 def load_settings(path: Path = settings_path):
@@ -118,20 +182,16 @@ def load_settings(path: Path = settings_path):
                 settings = migrate_settings(data)
             except Exception as err:
                 print("# Ошибка при миграции!!", err, "\n# Файл настроек будет перезаписан")
-            with path.open("w+") as s:
-                yaml.dump(settings, s, default_flow_style=False)
+                msb.showerror("Waba: ошибка миграции настроек", f"{err}\n"
+                                                                f"Настройки будут сброшены!")
+            save_settings(path)
         else:
             settings = data
     else:
         path.parent.mkdir()
-        with path.open("w+") as s:
-            yaml.dump(settings, s, default_flow_style=False)
+        save_settings(path)
+    os.chdir(settings["_venv_dir"])
     return settings
-
-
-def save_settings(path: Path = settings_path):
-    with path.open("w+") as s:
-        yaml.dump(settings, s, default_flow_style=False)
 
 
 """
@@ -350,6 +410,7 @@ def main():
         padx=10,
         anchor="w",
         command=check,
+        state=f_settings("tray", "tkinter"),
         variable=hiding_to_tray_chbtn_var
     )
     hiding_to_tray_chbtn.pack(fill=tk.X)
@@ -360,6 +421,7 @@ def main():
         padx=10,
         anchor="w",
         command=check,
+        state=f_settings("tray", "tkinter"),
         variable=hiding_when_start_chbtn_var
     )
     hiding_when_start_chbtn.pack(fill=tk.X)
@@ -370,6 +432,7 @@ def main():
         padx=10,
         anchor="w",
         command=check,
+        state=f_settings("notifications", "tkinter"),
         variable=notifications_chbtn_var
     )
     notifications_chbtn.pack(fill=tk.X)
@@ -380,6 +443,7 @@ def main():
         padx=10,
         anchor="w",
         command=check,
+        state=f_settings("autostart", "tkinter"),
         variable=autostart_chbtn_var
     )
     autostart_chbtn.pack(fill=tk.X)
@@ -389,6 +453,7 @@ def main():
         text="Обновлять каждые:",
         padx=10,
         anchor="w",
+        state=f_settings("threading", "tkinter")
     )
     lbl_update_rate_lst.pack(fill=tk.X)
 
@@ -407,7 +472,8 @@ def main():
             "15 мин.",
             "30 мин.",
             "1 час"
-        ]
+        ],
+        state=f_settings("threading", "tkinter")
     )
     update_rate_lst.pack(fill=tk.X)
 
@@ -473,6 +539,8 @@ def main():
     ...
 
     def upd_bright(icon=None, *_):
+        if not icon:
+            icon = sys_icon
         # subprocess.run(update_brightness, input=icon)
         try:
             answ = update_brightness(icon)
@@ -518,42 +586,25 @@ def main():
         main_window.after(0, main_window.deiconify)
         check()
 
-    def quit_all(icon: pystray.Icon = None, *_):
+    def quit_all(icon: pystray.Icon = None, *_, window: tk.Tk = main_window):
         def q():
             if icon is not None:
                 icon.stop()
-            main_window.deiconify()
-            main_window.quit()
-            global thread_alive
-            thread_alive = False
-            thread.join()
+            if f_settings("threading", "thread"):
+                global thread_alive
+                thread_alive = False
+                thread.join()
+            window.deiconify()
+            window.quit()
 
         import loading_screen
         loading_screen.processing(q, "Waba: Завершение работы", "Выходим...")
-        # exit(0)
-        ...
+        exit(0)
 
     def set_timer(_, MenuItem: pystray.MenuItem):
         print("-- update_tray")
         global settings
         settings["cycle_timer"] = timer_values_of_names[MenuItem.text]
-        # match MenuItem.text:
-        #    case "Не обновлять":
-        #        settings["cycle_timer"] = None
-        #    case "30 c.":
-        #        settings["cycle_timer"] = 30
-        #    case "1 м.":
-        #        settings["cycle_timer"] = 60
-        #    case "5 м.":
-        #        settings["cycle_timer"] = 300
-        #    case "10 м.":
-        #        settings["cycle_timer"] = 600
-        #    case "15 м.":
-        #        settings["cycle_timer"] = 900
-        #    case "30 м.":
-        #        settings["cycle_timer"] = 1800
-        #    case "1 ч.":
-        #        settings["cycle_timer"] = 3600
         save_settings()
         update()
         check()
@@ -564,28 +615,44 @@ def main():
         update()
         check()
     ...
-    tray_menu = pystray.Menu(
-        pystray.MenuItem("Открыть настройки", show_window, default=True),
-        pystray.MenuItem("Обновить яркость", upd_bright, default=False),
-        pystray.MenuItem("Обновлять раз в:", pystray.Menu(
-                pystray.MenuItem("Не обновлять", set_timer, lambda item: settings["cycle_timer"] is None, radio=True),
-                pystray.MenuItem("30 c.", set_timer, lambda item: settings["cycle_timer"] == 30, radio=True),
-                pystray.MenuItem("1 м.", set_timer, lambda item: settings["cycle_timer"] == 60, radio=True),
-                pystray.MenuItem("5 м.", set_timer, lambda item: settings["cycle_timer"] == 300, radio=True),
-                pystray.MenuItem("10 м.", set_timer, lambda item: settings["cycle_timer"] == 600, radio=True),
-                pystray.MenuItem("15 м.", set_timer, lambda item: settings["cycle_timer"] == 900, radio=True),
-                pystray.MenuItem("30 м.", set_timer, lambda item: settings["cycle_timer"] == 1800, radio=True),
-                pystray.MenuItem("1 ч.", set_timer, lambda item: settings["cycle_timer"] == 3600, radio=True),
-        )),
-        pystray.MenuItem("Автозапуск", autostart_checkbox, lambda item: settings["autostart"]),
-        pystray.MenuItem("GitHub", github_page),
-        pystray.MenuItem("Закрыть", quit_all),
-    )
-    sys_icon = pystray.Icon("WABA", PIL.Image.open("settings_brightness.png"), title, tray_menu)
-    sys_icon.run_detached()
+    if f_settings("tray", "main"):
+        tray_menu = pystray.Menu(
+            pystray.MenuItem("Открыть настройки", show_window, default=True),
+            pystray.MenuItem("Обновить яркость", upd_bright, default=False),
+            pystray.MenuItem("Обновлять раз в:", pystray.Menu(
+                    pystray.MenuItem("Не обновлять", set_timer,
+                                     lambda item: settings["cycle_timer"] is None, radio=True),
+                    pystray.MenuItem("30 c.", set_timer,
+                                     lambda item: settings["cycle_timer"] == 30, radio=True),
+                    pystray.MenuItem("1 м.", set_timer,
+                                     lambda item: settings["cycle_timer"] == 60, radio=True),
+                    pystray.MenuItem("5 м.", set_timer,
+                                     lambda item: settings["cycle_timer"] == 300, radio=True),
+                    pystray.MenuItem("10 м.", set_timer,
+                                     lambda item: settings["cycle_timer"] == 600, radio=True),
+                    pystray.MenuItem("15 м.", set_timer,
+                                     lambda item: settings["cycle_timer"] == 900, radio=True),
+                    pystray.MenuItem("30 м.", set_timer,
+                                     lambda item: settings["cycle_timer"] == 1800, radio=True),
+                    pystray.MenuItem("1 ч.", set_timer,
+                                     lambda item: settings["cycle_timer"] == 3600, radio=True),
+                ),
+                             visible=f_settings("threading", "tray")
+            ),
+            pystray.MenuItem("Автозапуск", autostart_checkbox, lambda item: settings["autostart"],
+                             visible=f_settings("autostart", "tray")),
+            pystray.MenuItem("GitHub", github_page),
+            pystray.MenuItem("Закрыть", quit_all),
+        )
+        sys_icon = pystray.Icon("WABA", PIL.Image.open("settings_brightness.png"), title, tray_menu)
+        sys_icon.run_detached()
+    else:
+        sys_icon = None
 
-    thread = threading.Thread(target=timer_thread, args=(sys_icon, ))
-    thread.start()
+    if f_settings("threading", "thread"):
+        print("-- starting timer thread")
+        thread = threading.Thread(target=timer_thread, args=(sys_icon, ))
+        thread.start()
     ...
 
     def hide_window(anyway: bool = False):
@@ -601,7 +668,7 @@ def main():
         else:
             if msb.askyesno("Waba: закрыть приложение",
                             "Действительно хотите закрыть приложение?"):
-                quit_all(sys_icon)
+                quit_all(sys_icon, window=main_window)
     ...
     main_window.protocol('WM_DELETE_WINDOW', hide_window)
     # noinspection PyUnboundLocalVariable

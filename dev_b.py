@@ -586,7 +586,7 @@ def main():
         main_window.after(0, main_window.deiconify)
         check()
 
-    def quit_all(icon: pystray.Icon = None, *_, window: tk.Tk = main_window):
+    def quit_all(icon: pystray.Icon = None, *_, window: tk.Tk = main_window, do_destroy=False):
         def q():
             if icon is not None:
                 icon.stop()
@@ -596,7 +596,10 @@ def main():
                 thread.join()
             window.withdraw()
             window.deiconify()
-            window.quit()
+            if do_destroy:
+                window.destroy()
+            else:
+                window.quit()
 
         import loading_screen
         loading_screen.processing(q, "Waba: Завершение работы", "Выходим...")
@@ -669,7 +672,7 @@ def main():
         else:
             if msb.askyesno("Waba: закрыть приложение",
                             "Действительно хотите закрыть приложение?"):
-                quit_all(sys_icon, window=main_window)
+                quit_all(sys_icon, window=main_window, do_destroy=True)
     ...
     main_window.protocol('WM_DELETE_WINDOW', hide_window)
     # noinspection PyUnboundLocalVariable

@@ -18,7 +18,7 @@ import yaml
 import time
 
 title = "Waba (v.Dev_B)"
-version = "0.2.4.0"
+version = "0.2.4.1"
 github_tag = "dev_b_pre-4"
 edition = "venv"  # Всего 3 издания: "venv", "folder" и "exe"
 
@@ -33,7 +33,7 @@ edition = "venv"  # Всего 3 издания: "venv", "folder" и "exe"
     Defaults
 """
 # Default settings values
-settings_version = 5
+settings_version = 6
 settings_path = Path(os.getenv("APPDATA", ""), "waba", "settings.yaml")
 waba_user_files_path = Path(os.getenv("APPDATA", ""), "waba")
 settings = {
@@ -41,13 +41,14 @@ settings = {
     "settings_version": settings_version,
     "theme": "dark",
     "autostart": False,
-    "checking_for_updates": True,
+    "checking_for_updates": False,
     # features
     "features": {
         # Обновляются только после перезапуска!!
         "autoupdate": False,
         "autostart": True,
         "custom_icons": True,  # Пока ничего не делает
+        "safe_math_mode": True,
         "threading": True,
         "notifications": True,
         "tray": True,
@@ -67,11 +68,21 @@ settings = {
     "amount_of_shots": 1,
     # math
     "do_use_custom_method": False,
-    "module_method": "",
+    "module_method": "{} * 100 // 255 ** 2 // 100",
 }
 
 # Потом по желанию сокращу
 features_values_of_switches = {
+    "autoupdate": {
+        True: {
+            "main": True,
+            "tkinter": "normal",
+        },
+        False: {
+            "main": False,
+            "tkinter": "disabled"
+        }
+    },
     "autostart": {
         True: {
             "tray": True,
@@ -231,7 +242,10 @@ def get_brightness(device: str = "<video0>", wait: int = 0, repeats: int = 1):
 
 
 def calc_custom(value: int, func: str):
-    return eval(func.format(value))
+    if settings["features"]["safe_math_mode"]:
+        return int(eval(func.format(value), {"value": value, "x": value}))
+    else:
+        return eval(func.format(value))
 
 
 def calc_value_v1(value: int):
@@ -265,7 +279,7 @@ def update_brightness(icon: pystray.Icon = None, *_, method: str = None):
     sbc.set_brightness(m_b, d)
     if icon is not None and settings["notifications"]:
         icon.notify(
-            f"{sbc.get_brightness(d)[0]}/100%",
+            f"{cam_b}/255 | {old_b}% -> {m_b}%",
             "Яркость обновлена",
         )
     return d, old_b, cam_b, m_b
@@ -279,7 +293,10 @@ def timer_thread(_):
     while thread_alive:
         if settings["cycle_timer"]:
             if int(time.monotonic()) - last_time > settings["cycle_timer"]:
-                update_brightness()
+                try:
+                    update_brightness()
+                except Exception as err:
+                    msb.showerror("Waba: Сбой", f"{err}")
                 last_time = int(time.monotonic())
         time.sleep(settings["timer_tick_delay"])
 
@@ -334,6 +351,7 @@ def main():
         ...
         if settings["autostart"] != autostart_chbtn_var.get():
             settings["autostart"] = autostart(autostart_chbtn_var.get())
+        settings["checking_for_updates"] = checking_for_updates_chbtn_var.get()
         settings["hiding_to_tray"] = hiding_to_tray_chbtn_var.get()
         settings["hide_after_start"] = hiding_when_start_chbtn_var.get()
         settings["notifications"] = notifications_chbtn_var.get()
@@ -357,6 +375,7 @@ def main():
     hiding_when_start_chbtn_var = tk.BooleanVar()
     notifications_chbtn_var = tk.BooleanVar()
     autostart_chbtn_var = tk.BooleanVar()
+    checking_for_updates_chbtn_var = tk.BooleanVar()
     update_rate_lst_var = tk.StringVar()
     display_list_var = tk.StringVar()
     spinbox_shot_delay_var = tk.IntVar()
@@ -368,6 +387,7 @@ def main():
         hiding_when_start_chbtn_var.set(settings["hide_after_start"])
         notifications_chbtn_var.set(settings["notifications"])
         autostart_chbtn_var.set(settings["autostart"])
+        checking_for_updates_chbtn_var.set(settings["checking_for_updates"])
         display_list_var.set(settings["display"])
         update_rate_lst_var.set(timer_names_of_values[settings["cycle_timer"]])
         spinbox_shot_delay_var.set(settings["snapshot_delay"])
@@ -383,6 +403,7 @@ def main():
             changes += int(hiding_when_start_chbtn_var.get() != settings["hide_after_start"])
             changes += int(notifications_chbtn_var.get() != settings["notifications"])
             changes += int(autostart_chbtn_var.get() != settings["autostart"])
+            changes += int(checking_for_updates_chbtn_var.get() != settings["checking_for_updates"])
             changes += int(timer_values_of_names[update_rate_lst_var.get()] != settings["cycle_timer"])
             changes += int(display_list_var.get() != settings["display"])
             changes += int(spinbox_shot_delay_var.get() != settings["snapshot_delay"])
@@ -452,6 +473,17 @@ def main():
         variable=autostart_chbtn_var
     )
     autostart_chbtn.pack(fill=tk.X)
+
+    checking_for_updates_chbtn = tk.Checkbutton(
+        left_side_frame,
+        text="Искать обновления",
+        padx=10,
+        anchor="w",
+        command=check,
+        state=f_settings("autoupdate", "tkinter"),
+        variable=checking_for_updates_chbtn_var
+    )
+    checking_for_updates_chbtn.pack(fill=tk.X)
     ...
     lbl_update_rate_lst = tk.Label(
         right_side_frame,
@@ -583,7 +615,7 @@ def main():
     bottom_frame.pack(side=tk.BOTTOM, fill=tk.X)
     ...
     # main_window.geometry("400x250")
-    main_window.geometry("310x235")
+    main_window.geometry("315x250")
     main_window.resizable(width=False, height=False)
     ...
 
@@ -631,7 +663,7 @@ def main():
             pystray.MenuItem("Обновлять раз в:", pystray.Menu(
                     pystray.MenuItem("Не обновлять", set_timer,
                                      lambda item: settings["cycle_timer"] is None, radio=True),
-                    pystray.MenuItem("30 c.", set_timer,
+                    pystray.MenuItem("30 с.", set_timer,
                                      lambda item: settings["cycle_timer"] == 30, radio=True),
                     pystray.MenuItem("1 м.", set_timer,
                                      lambda item: settings["cycle_timer"] == 60, radio=True),
@@ -665,7 +697,7 @@ def main():
     ...
 
     def hide_window(anyway: bool = False):
-        if settings["hiding_to_tray"] or anyway:
+        if (settings["hiding_to_tray"] or anyway) and f_settings("tray", "main"):
             main_window.withdraw()
             if settings["im_hiding_message"] and settings["notifications"]:
                 sys_icon.notify(
@@ -709,7 +741,7 @@ if __name__ == "__main__":
     del displays
     load_settings()
     do_start = True
-    if settings["checking_for_updates"] and settings["features"]["autoupdate"]:
+    if settings["checking_for_updates"] and f_settings("autoupdate", "main"):
         import updater.manager
         if updater.manager.check_for_updates_with_ui(
                 tag_or_sha=github_tag,

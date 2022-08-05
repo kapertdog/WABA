@@ -87,7 +87,10 @@ def check_for_updates_with_ui(tag_or_sha, user_files_path: str, edition: str = "
             except Exception:
                 return False
         case _:
-            msb.showerror("Updater: В разработке", "Авто-обновление всё ещё разрабатывается~")
+            msb.showerror("Updater: В разработке", "Функция проверки обновлений\n"
+                                                   "активирована файлом настроек,\n"
+                                                   "но пока не реализована\n"
+                                                   f'для "{edition}" издания.')
             return False
     window = tk.Tk()
     window.geometry('300x120')

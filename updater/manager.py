@@ -65,6 +65,8 @@ def unzip_file(file_path, output_path: str = ""):
     Интерфейс
 """
 
+do_reload = True
+
 
 def check_for_updates_with_ui(tag_or_sha, user_files_path: str, edition: str = "folder"):
 
@@ -132,7 +134,7 @@ def check_for_updates_with_ui(tag_or_sha, user_files_path: str, edition: str = "
             old_files = os.listdir("updater")
             pb.start()
             download()
-            update_status("Разархивация...")
+            update_status("Распаковка косметики...")
             pb.stop()
             pb.config(mode="indeterminate")
             pb.start()
@@ -142,7 +144,11 @@ def check_for_updates_with_ui(tag_or_sha, user_files_path: str, edition: str = "
             update_status("Подготовка к установке...")
             import shutil
             folder_name = [item for item in os.listdir("updater") if item not in frozenset(old_files)][0]
+            if os.path.exists(f"{user_files_path}/waba_update_data"):
+                shutil.rmtree(f"{user_files_path}/waba_update_data")
             shutil.copytree(f"updater/{folder_name}", f"{user_files_path}/waba_update_data")
+            if os.path.exists(f"{user_files_path}/installer.exe"):
+                os.remove(f"{user_files_path}/installer.exe")
             shutil.copyfile(f"updater/installer.exe", f"{user_files_path}/installer.exe")
             shutil.rmtree(f"updater/{folder_name}")
 
@@ -150,11 +156,14 @@ def check_for_updates_with_ui(tag_or_sha, user_files_path: str, edition: str = "
             ...
         except Exception as err:
             msb.showerror("Updater: сбой", f"Что-то пошло не так, обновление отменено.\n"
-                                           f"{err}")
+                                           f"{err}\n"
+                                           f"{releases}")
             window.destroy()
-            exit(0)
+            global do_reload
+            do_reload = False
 
     window.after(1000, update)
 
     window.mainloop()
-    return True
+    global do_reload
+    return do_reload

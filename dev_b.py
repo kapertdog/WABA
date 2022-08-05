@@ -18,7 +18,7 @@ import yaml
 import time
 
 title = "Waba (v.Dev_B)"
-version = "0.2.4.8"
+version = "0.2.4.0"
 github_tag = "dev_b_pre-4"
 edition = "venv"  # Всего 3 издания: "venv", "folder" и "exe"
 
@@ -33,7 +33,7 @@ edition = "venv"  # Всего 3 издания: "venv", "folder" и "exe"
     Defaults
 """
 # Default settings values
-settings_version = 4
+settings_version = 5
 settings_path = Path(os.getenv("APPDATA", ""), "waba", "settings.yaml")
 waba_user_files_path = Path(os.getenv("APPDATA", ""), "waba")
 settings = {
@@ -61,7 +61,7 @@ settings = {
     "device": "<video0>",
     "display": None,
     # snapshot
-    "cycle_timer": None,
+    "cycle_timer": 60,
     "timer_tick_delay": 10,
     "snapshot_delay": 1,
     "amount_of_shots": 1,
@@ -708,13 +708,16 @@ if __name__ == "__main__":
     settings["display"] = displays[0]
     del displays
     load_settings()
+    do_start = True
     if settings["checking_for_updates"] and settings["features"]["autoupdate"]:
         import updater.manager
         if updater.manager.check_for_updates_with_ui(
                 tag_or_sha=github_tag,
                 # tag_or_sha="sus",
-                edition="folder",
+                edition=edition,
                 user_files_path=waba_user_files_path):
-            os.system(f"start {waba_user_files_path}/installer.exe")
-            exit(0)
-    main()
+            os.chdir(waba_user_files_path)
+            os.system(f'"{Path(waba_user_files_path, """installer.exe""")}"')
+            do_start = False
+    if do_start:
+        main()

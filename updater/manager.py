@@ -82,7 +82,11 @@ def check_for_updates_with_ui(tag_or_sha, user_files_path: str, edition: str = "
                     return False
                 else:
                     if not msb.askyesno("Updater: Обновление", "Найдена новая версия приложения!\n"
-                                                               "Хотите обновить?"):
+                                                               "Хотите обновить? "
+                                                               f"( ~{releases[0]['assets'][0]['size'] // 1024 // 1024}"
+                                                               f" MB )\n"
+                                                               "\n"
+                                                               f"{tag_or_sha} -> {releases[0]['tag_name']}\n"):
                         return False
             except Exception:
                 return False
@@ -100,7 +104,7 @@ def check_for_updates_with_ui(tag_or_sha, user_files_path: str, edition: str = "
     pb = ttk.Progressbar(
         window,
         variable=pb_var,
-        maximum=get_size_of_last_release(releases) // (8192 * 8),
+        maximum=get_size_of_last_release(releases) // 8192 // 7,
         orient="horizontal",
         mode="determinate",
         length=280,

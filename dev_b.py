@@ -18,8 +18,8 @@ import yaml
 import time
 
 title = "Waba (v.Dev_B)"
-version = "0.2.3.7"
-github_tag = "dev_b_pre-3"
+version = "0.2.4.8"
+github_tag = "dev_b_pre-4"
 edition = "venv"  # Всего 3 издания: "venv", "folder" и "exe"
 
 # camera = iio.get_reader("<video0>")
@@ -35,14 +35,17 @@ edition = "venv"  # Всего 3 издания: "venv", "folder" и "exe"
 # Default settings values
 settings_version = 4
 settings_path = Path(os.getenv("APPDATA", ""), "waba", "settings.yaml")
+waba_user_files_path = Path(os.getenv("APPDATA", ""), "waba")
 settings = {
     "_venv_dir": os.getcwd(),
     "settings_version": settings_version,
     "theme": "dark",
     "autostart": False,
+    "checking_for_updates": True,
     # features
     "features": {
         # Обновляются только после перезапуска!!
+        "autoupdate": False,
         "autostart": True,
         "custom_icons": True,  # Пока ничего не делает
         "threading": True,
@@ -678,10 +681,10 @@ def main():
     ...
     main_window.protocol('WM_DELETE_WINDOW', hide_window)
     # noinspection PyUnboundLocalVariable
-    if settings["hide_after_start"]:
+    if settings["hide_after_start"] and settings["features"]["tray"]:
         main_window.after(0, hide_window(True))
 
-    main_window.iconbitmap("logo2.ico")
+    main_window.iconbitmap("resources/logo2.ico")
     main_window.after(0, check)
     main_window.mainloop()
 
@@ -705,4 +708,13 @@ if __name__ == "__main__":
     settings["display"] = displays[0]
     del displays
     load_settings()
+    if settings["checking_for_updates"] and settings["features"]["autoupdate"]:
+        import updater.manager
+        if updater.manager.check_for_updates_with_ui(
+                tag_or_sha=github_tag,
+                # tag_or_sha="sus",
+                edition="folder",
+                user_files_path=waba_user_files_path):
+            os.system(f"start {waba_user_files_path}/installer.exe")
+            exit(0)
     main()

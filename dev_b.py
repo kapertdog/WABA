@@ -18,8 +18,8 @@ import yaml
 import time
 
 title = "Waba (v.Dev_B)"
-version = "0.2.4.1"
-github_tag = "dev_b_pre-4"
+version = "0.2.4.2"
+github_tag = "dev_b_pre-6"
 edition = "venv"  # Всего 3 издания: "venv", "folder" и "exe"
 
 # camera = iio.get_reader("<video0>")
@@ -45,7 +45,7 @@ settings = {
     # features
     "features": {
         # Обновляются только после перезапуска!!
-        "autoupdate": False,
+        "autoupdate": True,
         "autostart": True,
         "custom_icons": True,  # Пока ничего не делает
         "safe_math_mode": True,
@@ -63,7 +63,7 @@ settings = {
     "display": None,
     # snapshot
     "cycle_timer": 60,
-    "timer_tick_delay": 10,
+    "timer_tick_delay": 1,
     "snapshot_delay": 1,
     "amount_of_shots": 1,
     # math

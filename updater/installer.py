@@ -78,7 +78,7 @@ if config["do_make_version_file"]:
     pb.message = "Making version.json file..."
     pb.update()
 
-    with open("waba_additional_files/version.json") as version_file:
+    with open("waba_additional_files/version.json", "w+") as version_file:
         version_file_data = {
             'version': config["version"],
             'edition': config["edition"]

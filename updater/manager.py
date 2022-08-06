@@ -150,7 +150,7 @@ def check_for_updates_with_ui(tag_or_sha, user_files_path: str, edition: str = "
                     main_file_url = github_master_download_url
                     size_of_file = get_size_of_repo(repository)
                     new_tag_or_sha = get_last_commit_sha(commits)
-                    start_command = f''' "{Path('venv/Scripts/python.exe').absolute()}" "dev_b.py" '''
+                    start_command = "start_vB.cmd"
                     do_make_version_file = True
                     do_pip_update_requirements = True
                     if not msb.askyesno("Updater: Обновление", "Найдена новая версия приложения!\n"
@@ -241,25 +241,22 @@ def check_for_updates_with_ui(tag_or_sha, user_files_path: str, edition: str = "
                      if item not in frozenset(old_files)
                      ]
                 )
+            import shutil
             if do_pip_update_requirements:
+                shutil.copy2(Path("updater", folder_name, "requirements.txt"), "updater")
                 if not Path("venv").exists():
                     os.mkdir("updater/waba_additional_files/venv")
                     unzip_file("updater/empty_venv.zip", "updater/waba_additional_files/venv/")
                     os.system(
-                        f''' "{Path(f'updater/waba_additional_files/venv/Scripts/pip.exe').absolute()}" '''
-                        f'install -r'
-                        f''' "{Path(f'updater/{folder_name}/requirements.txt').absolute()}" '''
+                        ' "updater/install_requirements_to_new.cmd" '
                     )
                 else:
-                    print(Path().absolute())
                     os.system(
-                        f''' "{Path(f'venv/Scripts/pip.exe').absolute()}" '''
-                        f'''install -r'''
-                        f''' "{Path(f'updater/{folder_name}/requirements.txt').absolute()}" '''
+                        ' "updater/install_requirements_to_global.cmd" '
                     )
+                os.remove("updater/requirements.txt")
 
             update_status("Подготовка к установке...")
-            import shutil
             # Вытаскиваем дополнительные файлы из их папок
             for file in add_files_list:
                 if os.path.isdir(f"updater/waba_additional_files/{file}"):

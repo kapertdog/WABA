@@ -133,7 +133,7 @@ def check_for_updates_with_ui(tag_or_sha, user_files_path: str, edition: str = "
                 if not check_for_venv_updates(tag_or_sha, commits):
                     return False
                 else:
-                    file_name = f"{project}-master.zip"
+                    file_name = f"master.zip"
                     main_file_url = github_master_download_url
                     size_of_file = get_size_of_repo(repository)
                     new_tag_or_sha = get_last_commit_sha(commits)

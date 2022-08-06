@@ -15,7 +15,6 @@ from pathlib import Path
 from autostart import autostart
 import pystray
 import yaml
-import json
 import time
 
 title = "Waba (v.Dev_B)"
@@ -218,9 +217,9 @@ def load_settings(path: Path = settings_path):
 
 
 def load_version_file():
-    if Path("version.json").exists():
-        with open("version.json") as v:
-            data = json.load(v)
+    if Path("version.yaml").exists():
+        with open("version.yaml") as v:
+            data = yaml.safe_load(v)
         global edition, github_tag, version
         edition = data["edition"]
         github_tag = data["version"]

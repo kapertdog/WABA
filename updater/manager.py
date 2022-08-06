@@ -7,7 +7,7 @@ import os
 from pathlib import Path
 import requests
 import zipfile
-import json
+import yaml
 
 
 user = "kapertdog"
@@ -39,6 +39,10 @@ def get_github_releases_json():
 
 def get_github_commits_json():
     return requests.get(github_commits_url).json()
+
+
+def get_last_commit_message(data: list):
+    return data[0]["commit"]["message"]
 
 
 def check_for_release_updates(tag: str, data: list) -> bool:
@@ -120,7 +124,7 @@ def check_for_updates_with_ui(tag_or_sha, user_files_path: str, edition: str = "
                     main_file_url = get_last_release_update_link(releases)
                     size_of_file = get_size_of_last_release(releases)
                     new_tag_or_sha = get_last_release_tag(releases)
-                    start_command = f'"WABA v.Dev_B.exe"'
+                    start_command = f''' "WABA v.Dev_B.exe" '''
                     do_make_version_file = False
                     do_pip_update_requirements = False
                     if not msb.askyesno("Updater: Обновление", "Найдена новая версия приложения!\n"
@@ -142,17 +146,19 @@ def check_for_updates_with_ui(tag_or_sha, user_files_path: str, edition: str = "
                     return False
                 else:
                     file_name = f"master.zip"
+                    commit_message = get_last_commit_message(commits)
                     main_file_url = github_master_download_url
                     size_of_file = get_size_of_repo(repository)
                     new_tag_or_sha = get_last_commit_sha(commits)
-                    start_command = f'"{Path("venv", "Scripts", "python.exe").absolute()}" "dev_b.py"'
+                    start_command = f''' "{Path('venv/Scripts/python.exe').absolute()}" "dev_b.py" '''
                     do_make_version_file = True
                     do_pip_update_requirements = True
                     if not msb.askyesno("Updater: Обновление", "Найдена новая версия приложения!\n"
                                                                "Хотите обновить? "
                                                                f"( ~{size_of_file // 1024} MB )\n"
                                                                "\n"
-                                                               f"{tag_or_sha} -> {new_tag_or_sha}\n"):
+                                                               f"{tag_or_sha} -> {new_tag_or_sha}\n"
+                                                               f"Что нового:\n{commit_message}"):
                         return False
             except Exception as err:
                 msb.showerror("Waba: сбой", f"Не удалось проверить наличие обновления\n\n"
@@ -240,15 +246,16 @@ def check_for_updates_with_ui(tag_or_sha, user_files_path: str, edition: str = "
                     os.mkdir("updater/waba_additional_files/venv")
                     unzip_file("updater/empty_venv.zip", "updater/waba_additional_files/venv/")
                     os.system(
-                        f'"{Path(f"updater/waba_additional_files/venv/Scripts/pip.exe").absolute()}"'
-                        f' install -r '
-                        f'"{Path(f"updater/{folder_name}/requirements.txt").absolute()}"'
+                        f''' "{Path(f'updater/waba_additional_files/venv/Scripts/pip.exe').absolute()}" '''
+                        f'install -r'
+                        f''' "{Path(f'updater/{folder_name}/requirements.txt').absolute()}" '''
                     )
                 else:
+                    print(Path().absolute())
                     os.system(
-                        f'"{Path(f"venv/Scripts/pip.exe").absolute()}"'
-                        f' install -r '
-                        f'"{Path(f"updater/{folder_name}/requirements.txt").absolute()}"'
+                        f''' "{Path(f'venv/Scripts/pip.exe').absolute()}" '''
+                        f'''install -r'''
+                        f''' "{Path(f'updater/{folder_name}/requirements.txt').absolute()}" '''
                     )
 
             update_status("Подготовка к установке...")
@@ -266,14 +273,14 @@ def check_for_updates_with_ui(tag_or_sha, user_files_path: str, edition: str = "
             if os.path.exists(f"{user_files_path}/installer.exe"):
                 os.remove(f"{user_files_path}/installer.exe")
             # Создаём дополнительные файлы для установщика
-            with open(f"updater/waba_additional_files/config.json", "w+") as config:
+            with open(f"updater/waba_additional_files/config.yaml", "w+") as config:
                 config_data = {
                     "do_make_version_file": do_make_version_file,
                     "version": new_tag_or_sha,
                     "edition": edition,
                     "start_command": start_command
                 }
-                json.dump(config_data, config)
+                yaml.dump(config_data, config, default_flow_style=False)
                 ...
             # Переносим!!
             shutil.copytree(f"updater/{folder_name}", f"{user_files_path}/waba_update_data")

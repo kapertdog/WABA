@@ -69,24 +69,24 @@ app_dir = get_app_directory()
 pb.message = "Finding config file..."
 pb.update()
 
-import json
-with open("waba_additional_files/config.json", "r+") as file_config:
-    config = json.load(file_config)
-os.remove("waba_additional_files/config.json")
 
-if os.path.exists("waba_additional_files/version.json"):
-    os.remove("waba_additional_files/version.json")
+with open("waba_additional_files/config.yaml", "r+") as file_config:
+    config = yaml.safe_load(file_config)
+os.remove("waba_additional_files/config.yaml")
+
+if os.path.exists("waba_additional_files/version.yaml"):
+    os.remove("waba_additional_files/version.yaml")
 
 if config["do_make_version_file"]:
-    pb.message = "Making version.json file..."
+    pb.message = "Making version.yaml file..."
     pb.update()
 
-    with open("waba_additional_files/version.json", "w+") as version_file:
+    with open("waba_additional_files/version.yaml", "w+") as version_file:
         version_file_data = {
             'version': config["version"],
             'edition': config["edition"]
         }
-        json.dump(version_file_data, version_file)
+        yaml.dump(version_file_data, version_file, default_flow_style=False)
 
 
 pb.message = "Installing..."

@@ -15,6 +15,7 @@ from pathlib import Path
 from autostart import autostart
 import pystray
 import yaml
+import json
 import time
 
 title = "Waba (v.Dev_B)"
@@ -204,10 +205,26 @@ def load_settings(path: Path = settings_path):
         else:
             settings = data
     else:
-        path.parent.mkdir()
+        if not path.parent.exists():
+            path.parent.mkdir()
+        save_settings(path)
+    if Path(settings["_venv_dir"]).exists():
+        ...
+    else:
+        settings["_venv_dir"] = str(Path.cwd())
         save_settings(path)
     os.chdir(settings["_venv_dir"])
     return settings
+
+
+def load_version_file():
+    if Path("version.json").exists():
+        with open("version.json") as v:
+            data = json.load(v)
+        global edition, github_tag, version
+        edition = data["edition"]
+        github_tag = data["version"]
+        version = f'{data["version"][:7]}'
 
 
 """
@@ -640,7 +657,6 @@ def main():
 
         import loading_screen
         loading_screen.processing(q, "Waba: Завершение работы", "Выходим...")
-        exit(0)
 
     def set_timer(_, MenuItem: pystray.MenuItem):
         print("-- update_tray")
@@ -740,6 +756,7 @@ if __name__ == "__main__":
     settings["display"] = displays[0]
     del displays
     load_settings()
+    load_version_file()
     do_start = True
     if settings["checking_for_updates"] and f_settings("autoupdate", "main"):
         import updater.manager

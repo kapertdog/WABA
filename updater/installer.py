@@ -66,6 +66,26 @@ pb.update()
 app_dir = get_app_directory()
 # shutil.rmtree(app_dir)
 
+pb.message = "Finding config file..."
+pb.update()
+
+import json
+with open("waba_additional_files/config.json", "r+") as file_config:
+    config = json.load(file_config)
+os.remove("waba_additional_files/config.json")
+
+if config["do_make_version_file"]:
+    pb.message = "Making version.json file..."
+    pb.update()
+
+    with open("wab_additional_files/version.json") as version_file:
+        version_file_data = {
+            'version': config["version"],
+            'edition': config["edition"]
+        }
+        json.dump(version_file_data, version_file)
+
+
 pb.message = "Installing..."
 pb.update()
 
@@ -73,6 +93,7 @@ pb.update()
 print("From:", Path(Path.cwd(), "waba_update_data"))
 print("To:", Path(app_dir))
 update(Path(Path.cwd(), "waba_update_data"), Path(app_dir))
+update(Path(Path.cwd(), "waba_additional_files"), Path(app_dir))
 
 pb.message = "Deleting temporary files..."
 pb.update()
@@ -89,5 +110,5 @@ input("Press ENTER to continue...")
 print("Restarting app...")
 
 os.chdir(app_dir)
-os.system(f'"{app_dir}/WABA v.Dev_B.exe"')
+os.system(config["start_command"])
 exit()

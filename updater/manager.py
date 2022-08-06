@@ -3,6 +3,7 @@
     Загрузчик обновлений.
     Взаимодействует с основным кодом, подготавливает файлы для установщика.
 """
+import os
 from pathlib import Path
 import requests
 import zipfile
@@ -72,6 +73,12 @@ def get_size_of_repo(data: list):
     return data["size"]
 
 
+def clear_temporary_installer():
+    installer_path = Path(os.getenv("APPDATA", ""), "waba", "installer.exe")
+    if installer_path.exists():
+        os.remove(installer_path)
+
+
 def download_file(url):
     local_filename = url.split('/')[-1]
     with requests.get(url, stream=True, allow_redirects=True) as r:
@@ -113,7 +120,7 @@ def check_for_updates_with_ui(tag_or_sha, user_files_path: str, edition: str = "
                     main_file_url = get_last_release_update_link(releases)
                     size_of_file = get_size_of_last_release(releases)
                     new_tag_or_sha = get_last_release_tag(releases)
-                    start_command = f"'WABA v.Dev_B.exe'"
+                    start_command = f'"WABA v.Dev_B.exe"'
                     do_make_version_file = False
                     do_pip_update_requirements = False
                     if not msb.askyesno("Updater: Обновление", "Найдена новая версия приложения!\n"
@@ -209,8 +216,6 @@ def check_for_updates_with_ui(tag_or_sha, user_files_path: str, edition: str = "
             unzip_file(f"updater/{file_name}", "updater")
             os.remove(f"updater/{file_name}")
             folder_name = [item for item in os.listdir("updater") if item not in frozenset(old_files)][0]
-            if do_pip_update_requirements:
-                os.system(f'"{Path("venv", "Scripts", "pip.exe")}" install -r requirements.txt')
 
             # Теперь с дополнительными
             pb.stop()
@@ -230,6 +235,21 @@ def check_for_updates_with_ui(tag_or_sha, user_files_path: str, edition: str = "
                      if item not in frozenset(old_files)
                      ]
                 )
+            if do_pip_update_requirements:
+                if not Path("venv").exists():
+                    os.mkdir("updater/waba_additional_files/venv")
+                    unzip_file("updater/empty_venv.zip", "updater/waba_additional_files/venv/")
+                    os.system(
+                        f'"{Path(f"updater/waba_additional_files/venv/Scripts/pip.exe").absolute()}"'
+                        f' install -r '
+                        f'"{Path(f"updater/{folder_name}/requirements.txt").absolute()}"'
+                    )
+                else:
+                    os.system(
+                        f'"{Path(f"venv/Scripts/pip.exe").absolute()}"'
+                        f' install -r '
+                        f'"{Path(f"updater/{folder_name}/requirements.txt").absolute()}"'
+                    )
 
             update_status("Подготовка к установке...")
             import shutil

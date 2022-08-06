@@ -102,6 +102,7 @@ pb.message = "Deleting temporary files..."
 pb.update()
 
 shutil.rmtree("waba_update_data")
+shutil.rmtree("waba_additional_files")
 
 pb.message = "Done!"
 pb.update()
@@ -114,4 +115,3 @@ print("Restarting app...")
 
 os.chdir(app_dir)
 os.system(config["start_command"])
-exit()

@@ -209,7 +209,7 @@ def check_for_updates_with_ui(tag_or_sha, user_files_path: str, edition: str = "
             os.remove(f"updater/{file_name}")
             folder_name = [item for item in os.listdir("updater") if item not in frozenset(old_files)][0]
             if do_pip_update_requirements:
-                os.system("'venv/Scripts/pip.exe' install -r requirements.txt")
+                os.system(r"'.\\venv\\Scripts\\pip.exe' install -r requirements.txt")
 
             # Теперь с дополнительными
             pb.stop()

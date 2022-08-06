@@ -74,6 +74,9 @@ with open("waba_additional_files/config.json", "r+") as file_config:
     config = json.load(file_config)
 os.remove("waba_additional_files/config.json")
 
+if os.path.exists("waba_additional_files/version.json"):
+    os.remove("waba_additional_files/version.json")
+
 if config["do_make_version_file"]:
     pb.message = "Making version.json file..."
     pb.update()

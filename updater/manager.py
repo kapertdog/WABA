@@ -3,6 +3,7 @@
     Загрузчик обновлений.
     Взаимодействует с основным кодом, подготавливает файлы для установщика.
 """
+from pathlib import Path
 import requests
 import zipfile
 import json
@@ -137,7 +138,7 @@ def check_for_updates_with_ui(tag_or_sha, user_files_path: str, edition: str = "
                     main_file_url = github_master_download_url
                     size_of_file = get_size_of_repo(repository)
                     new_tag_or_sha = get_last_commit_sha(commits)
-                    start_command = f"'./venv/Scripts/python.exe' './dev_b.py'"
+                    start_command = f'"{Path("venv", "Scripts", "python.exe").absolute()}" "dev_b.py"'
                     do_make_version_file = True
                     do_pip_update_requirements = True
                     if not msb.askyesno("Updater: Обновление", "Найдена новая версия приложения!\n"

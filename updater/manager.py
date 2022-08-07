@@ -255,11 +255,11 @@ def check_for_updates_with_ui(tag_or_sha, user_files_path: str,
                 if not Path("venv").exists():
                     # unzip_file("updater/empty_venv.zip", "updater/waba_additional_files")
                     os.system(
-                        ' "updater/install_requirements_to_new.cmd" '
+                        r' ".\updater\install_requirements_to_new.cmd" '
                     )
                 else:
                     os.system(
-                        ' "updater/install_requirements_to_global.cmd" '
+                        r' ".\updater\install_requirements_to_global.cmd" '
                     )
                 os.remove("updater/requirements.txt")
 

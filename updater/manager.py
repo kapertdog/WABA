@@ -134,7 +134,7 @@ def check_for_updates_with_ui(tag_or_sha, user_files_path: str, edition: str = "
                                                                f"{tag_or_sha} -> {new_tag_or_sha}\n"):
                         return False
             except Exception as err:
-                msb.showerror("Waba: сбой", f"Не удалось проверить наличие обновления\n\n"
+                msb.showerror("Waba: сбой", f"Не удалось проверить наличие обновлений\n\n"
                                             f"{err}")
                 return False
         case "venv":
@@ -148,16 +148,16 @@ def check_for_updates_with_ui(tag_or_sha, user_files_path: str, edition: str = "
                     file_name = f"master.zip"
                     commit_message = get_last_commit_message(commits)
                     main_file_url = github_master_download_url
-                    size_of_file = get_size_of_repo(repository)
+                    size_of_file = get_size_of_repo(repository) * 1024
                     new_tag_or_sha = get_last_commit_sha(commits)
                     start_command = "start_vB.cmd"
                     do_make_version_file = True
                     do_pip_update_requirements = True
                     if not msb.askyesno("Updater: Обновление", "Найдена новая версия приложения!\n"
                                                                "Хотите обновить? "
-                                                               f"( ~{size_of_file // 1024} MB )\n"
+                                                               f"( ~{size_of_file // 1024 // 1024} MB )\n"
                                                                "\n"
-                                                               f"{tag_or_sha} -> {new_tag_or_sha}\n"
+                                                               f"{tag_or_sha[:7]} -> {new_tag_or_sha[:7]}\n"
                                                                f"Что нового:\n{commit_message}"):
                         return False
             except Exception as err:

@@ -37,7 +37,7 @@ settings_version = 6
 settings_path = Path(os.getenv("APPDATA", ""), "waba", "settings.yaml")
 waba_user_files_path = Path(os.getenv("APPDATA", ""), "waba")
 settings = {
-    "_venv_dir": os.getcwd(),
+    "_venv_dir": os.getcwd(),  # Уже не очень важно
     "settings_version": settings_version,
     "theme": "dark",
     "autostart": False,
@@ -207,12 +207,9 @@ def load_settings(path: Path = settings_path):
         if not path.parent.exists():
             path.parent.mkdir()
         save_settings(path)
-    if Path(settings["_venv_dir"]).exists():
-        ...
-    else:
+    if not Path(settings["_venv_dir"]).exists():
         settings["_venv_dir"] = str(Path.cwd())
         save_settings(path)
-    os.chdir(settings["_venv_dir"])
     return settings
 
 
@@ -764,6 +761,8 @@ if __name__ == "__main__":
                 # tag_or_sha="sus",
                 edition=edition,
                 user_files_path=waba_user_files_path):
+            settings["_venv_dir"] = os.getcwd()
+            save_settings()
             os.chdir(waba_user_files_path)
             os.system(f'"{Path(waba_user_files_path, """installer.exe""")}"')
             do_start = False

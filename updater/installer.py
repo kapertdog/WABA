@@ -76,6 +76,8 @@ os.remove("waba_additional_files/config.yaml")
 
 if os.path.exists("waba_additional_files/version.yaml"):
     os.remove("waba_additional_files/version.yaml")
+if os.path.exists(f"{app_dir}" r"\version.yaml"):
+    os.remove(f"{app_dir}" r"\version.yaml")
 
 if config["do_make_version_file"]:
     pb.message = "Making version.yaml file..."
@@ -93,8 +95,8 @@ pb.message = "Installing..."
 pb.update()
 
 # shutil.copytree("waba_update_data", app_dir)
-print("From:", Path(Path.cwd(), "waba_update_data"))
-print("To:", Path(app_dir))
+# print("From:", Path(Path.cwd(), "waba_update_data"))
+# print("To:", Path(app_dir))
 update(Path(Path.cwd(), "waba_update_data"), Path(app_dir))
 update(Path(Path.cwd(), "waba_additional_files"), Path(app_dir))
 
@@ -108,10 +110,12 @@ pb.message = "Done!"
 pb.update()
 
 pb.finish()
-input("Press ENTER to continue...")
+print("\n-=- You can close this window~ -=-")
+# input("Press ENTER to continue...")
 # os.remove("installer.exe")
 
 print("Restarting app...")
 
 os.chdir(app_dir)
 os.system(config["start_command"])
+exit()

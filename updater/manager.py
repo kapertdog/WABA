@@ -253,7 +253,7 @@ def check_for_updates_with_ui(tag_or_sha, user_files_path: str,
             if do_pip_update_requirements:
                 shutil.copy2(Path("updater", folder_name, "requirements.txt"), "updater")
                 if not Path("venv").exists():
-                    unzip_file("updater/empty_venv.zip", "updater/waba_additional_files")
+                    # unzip_file("updater/empty_venv.zip", "updater/waba_additional_files")
                     os.system(
                         ' "updater/install_requirements_to_new.cmd" '
                     )

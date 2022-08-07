@@ -5,6 +5,9 @@
     Заменяет старые файлы новыми.
     Должен быть сразу exe и поставляться вместе с основной программой~
 """
+print("\n# WABA INSTALLER v0.0.1\n\n")
+
+
 import progress.spinner
 pb = progress.spinner.Spinner()
 pb.message = "Initialization..."
@@ -90,6 +93,13 @@ if config["do_make_version_file"]:
         }
         yaml.dump(version_file_data, version_file, default_flow_style=False)
 
+if not config["save_old_files"]:
+    pb.message = "!!! Erasing old version..."
+    pb.update()
+    shutil.rmtree(app_dir)
+    pb.update()
+    os.makedirs(app_dir)
+    pb.update()
 
 pb.message = "Installing..."
 pb.update()

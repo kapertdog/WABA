@@ -71,60 +71,6 @@ settings = {
     "module_method": "{} * 100 // 255 ** 2 // 100",
 }
 
-# Потом по желанию сокращу
-features_values_of_switches = {
-    "autoupdate": {
-        True: {
-            "main": True,
-            "tkinter": "normal",
-        },
-        False: {
-            "main": False,
-            "tkinter": "disabled"
-        }
-    },
-    "autostart": {
-        True: {
-            "tray": True,
-            "tkinter": "normal",
-        },
-        False: {
-            "tray": False,
-            "tkinter": "disabled",
-        }
-    },
-    "notifications": {
-        True: {
-            "tkinter": "normal",
-        },
-        False: {
-            "tkinter": "disabled"
-        }
-    },
-    "threading": {
-        True: {
-            "tkinter": "normal",
-            "tray": True,
-            "thread": True,
-        },
-        False: {
-            "tkinter": "disabled",
-            "tray": False,
-            "thread": False
-        }
-    },
-    "tray": {
-        True: {
-            "tkinter": "normal",
-            "main": True
-        },
-        False: {
-            "tkinter": "disabled",
-            "main": False
-        }
-    }
-}
-
 timer_values_of_names = {
     "30 с.": 30,
     "1 м.": 60,
@@ -153,8 +99,16 @@ for key in timer_values_of_names:
 """
 
 
-def f_settings(keyword: str, element: str) -> str:
-    return features_values_of_switches[keyword][settings["features"][keyword]][element]
+def f_settings(keyword: str, element: str = "main") -> str:
+    match element:
+        case "tkinter":
+            if settings["features"][keyword]:
+                return "normal"
+            else:
+                return "disabled"
+        case _:
+            return settings["features"][keyword]
+    # return features_values_of_switches[keyword][settings["features"][keyword]][element]
 
 
 def migrate_settings(data):
@@ -338,26 +292,22 @@ def github_page():
     __import__("webbrowser").open_new_tab(r"https://github.com/kapertdog/WABA")
 
 
-def about():
+def about(show: bool = True):
     with open("about.txt", "r+", encoding="UTF-8") as f:
         about_txt = f.read()
-    msb.showinfo(
-        "Waba: about",
-        about_txt
-    )
+    if show:
+        msb.showinfo(
+            "Waba: about",
+            about_txt
+        )
+    return about_txt
     # __import__("webbrowser").open_new_tab(r"https://github.com/kapertdog/WABA")
 
 
 def main():
     main_window = tk.Tk()
     main_window.title("Waba - настройки")
-    ...
-    top_frame = tk.Frame(main_window)
-    bottom_frame = tk.Frame(main_window, padx=10, pady=10, background="#ABB2B9")
-    ...
-    left_side_frame = tk.Frame(top_frame)
-    right_side_frame = tk.Frame(top_frame)
-    ...
+    ...  # Подготовка переменных
 
     def submit(*_):
         # settings["hide_after_start"] =
@@ -376,14 +326,6 @@ def main():
         save_settings()
         check()
 
-    submit_button = tk.Button(
-        bottom_frame,
-        command=submit,
-        text="Применить",
-        state="disabled",
-        relief=tk.GROOVE,
-    )
-    ...
     hiding_to_tray_chbtn_var = tk.BooleanVar()
     hiding_when_start_chbtn_var = tk.BooleanVar()
     notifications_chbtn_var = tk.BooleanVar()
@@ -407,7 +349,6 @@ def main():
         do_use_custom_method_chbtn_var.set(settings["do_use_custom_method"])
         entry_custom_func_var.set(settings["module_method"])
     update()
-    ...
 
     def check():
         changes = 0
@@ -432,7 +373,14 @@ def main():
             main_window.update()
         check_two()
         ...
-
+    ...  # Распределение главных фреймов
+    tab_control = ttk.Notebook(main_window)  # По-сути верхний фрейм
+    bottom_frame = tk.Frame(main_window, padx=10, pady=10, background="#ABB2B9")
+    ...  # Страница главных настроек
+    main_page = ttk.Frame(tab_control)
+    ...  # Левый и правый фреймы
+    left_side_frame = tk.Frame(main_page)
+    right_side_frame = tk.Frame(main_page)
     ...
     waba_title_image = tk.PhotoImage(file="resources/waba_title.png")
     waba_image = tk.Label(
@@ -582,11 +530,36 @@ def main():
     entry_custom_func.pack(fill=tk.X)
     ...
     tk.Label(
-        top_frame,
+        main_page,
         text=f"v.Dev_B ({version})   |   made with 💕",
         foreground="gray"
     ).pack(side=tk.BOTTOM)
     ...
+    ...  # Упаковка главных фреймов
+    left_side_frame.pack(side=tk.LEFT, fill=tk.BOTH)
+    right_side_frame.pack(side=tk.LEFT, fill=tk.BOTH)
+    ...  # Добавляем страничку
+    tab_control.add(main_page, text="Главная")
+
+    ...  # Страница дополнительных настроек
+    settings_page = ttk.Frame(tab_control)
+    ...  # Прописываем элементы
+
+    ...  # Добавляем
+    tab_control.add(settings_page, text="Дополнительно")
+
+    ...  # Страница About
+    about_page = ttk.Frame(tab_control)
+    ...  # Прописываем элементы
+    about_lbl = tk.Label(
+        about_page,
+        text=about(False)
+    )
+    about_lbl.pack()
+    ...  # Добавляем
+    tab_control.add(about_page, text="О проекте")
+
+    ...  # Теперь Нижний фрейм
 
     def upd_bright(icon=None, *_):
         if not icon:
@@ -611,7 +584,14 @@ def main():
         relief=tk.GROOVE,
     )
     check_button.pack(side=tk.LEFT)
-    ...
+
+    submit_button = tk.Button(
+        bottom_frame,
+        command=submit,
+        text="Применить",
+        state="disabled",
+        relief=tk.GROOVE,
+    )
     submit_button.pack(side=tk.RIGHT)
     ...
 
@@ -621,16 +601,11 @@ def main():
         else:
             entry_custom_func.config(state="disabled")
         ...
-    ...
-    left_side_frame.pack(side=tk.LEFT, fill=tk.BOTH)
-    right_side_frame.pack(side=tk.LEFT, fill=tk.BOTH)
-    top_frame.pack(fill=tk.X)
+    ...  # Упаковываем все странички
+    tab_control.pack(expand=1, fill='both', padx=5, pady=5)
     bottom_frame.pack(side=tk.BOTTOM, fill=tk.X)
-    ...
-    # main_window.geometry("400x250")
-    main_window.geometry("315x250")
-    main_window.resizable(width=False, height=False)
-    ...
+
+    ...  # А теперь трей и всякое что нужно сделать после
 
     def show_window():
         main_window.after(0, main_window.deiconify)
@@ -725,9 +700,13 @@ def main():
     ...
     main_window.protocol('WM_DELETE_WINDOW', hide_window)
     # noinspection PyUnboundLocalVariable
-    if settings["hide_after_start"] and settings["features"]["tray"]:
+    if settings["hide_after_start"] and f_settings("tray"):
         main_window.after(0, hide_window(True))
-
+    ...  # Корректировка размеров окна
+    # main_window.geometry("400x250")
+    main_window.geometry("320x280")
+    main_window.resizable(width=False, height=False)
+    ...  # Финальная подготовка и запуск основного цикла!!
     main_window.iconbitmap("resources/logo2.ico")
     main_window.after(0, check)
     main_window.mainloop()
@@ -736,6 +715,26 @@ def main():
 """
     Starter
 """
+
+do_start = True
+
+
+def check_for_updates(tag_or_sha, c_edition, user_files_path, save_old_files, do_ask_user):
+    import updater.manager
+    if updater.manager.check_for_updates_with_ui(
+            tag_or_sha=tag_or_sha,
+            save_old_files=save_old_files,
+            edition=c_edition,
+            user_files_path=user_files_path, do_ask_user=do_ask_user):
+        settings["_venv_dir"] = os.getcwd()
+        save_settings()
+        os.chdir(waba_user_files_path)
+        os.system(f'"{Path(waba_user_files_path, """installer.exe""")}"')
+        global do_start
+        do_start = False
+        return True
+    return False
+
 
 if __name__ == "__main__":
     displays = sbc.list_monitors()
@@ -753,18 +752,7 @@ if __name__ == "__main__":
     del displays
     load_settings()
     load_version_file()
-    do_start = True
     if settings["checking_for_updates"] and f_settings("autoupdate", "main"):
-        import updater.manager
-        if updater.manager.check_for_updates_with_ui(
-                tag_or_sha=github_tag,
-                # tag_or_sha="sus",
-                edition=edition,
-                user_files_path=waba_user_files_path):
-            settings["_venv_dir"] = os.getcwd()
-            save_settings()
-            os.chdir(waba_user_files_path)
-            os.system(f'"{Path(waba_user_files_path, """installer.exe""")}"')
-            do_start = False
+        check_for_updates(github_tag, edition, waba_user_files_path, True, True)
     if do_start:
         main()

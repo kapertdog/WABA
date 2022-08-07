@@ -41,8 +41,8 @@ def get_github_commits_json():
     return requests.get(github_commits_url).json()
 
 
-def get_last_commit_message(data: list):
-    return data[0]["commit"]["message"]
+def get_commit_message(data: list, commit: int = 0):
+    return data[commit]["commit"]["message"]
 
 
 def check_for_release_updates(tag: str, data: list) -> bool:
@@ -53,24 +53,24 @@ def check_for_venv_updates(sha: str, data: list) -> bool:
     return data[0]["sha"] != sha
 
 
-def get_last_release_tag(data: list):
-    return data[0]["tag_name"]
+def get_release_tag(data: list, release: int = 0):
+    return data[release]["tag_name"]
 
 
-def get_last_commit_sha(data: list):
-    return data[0]["sha"]
+def get_commit_sha(data: list, commit: int = 0):
+    return data[commit]["sha"]
 
 
-def get_last_release_update_link(data: list, asset: int = 0):
-    return data[0]["assets"][asset]["browser_download_url"]
+def get_release_update_link(data: list, asset: int = 0, release: int = 0):
+    return data[release]["assets"][asset]["browser_download_url"]
 
 
-def get_last_release_file_name(data: list, asset: int = 0):
-    return data[0]["assets"][asset]["name"]
+def get_release_file_name(data: list, asset: int = 0, release: int = 0):
+    return data[release]["assets"][asset]["name"]
 
 
-def get_size_of_last_release(data: list, asset: int = 0):
-    return data[0]["assets"][asset]["size"]
+def get_size_of_release(data: list, asset: int = 0, release: int = 0):
+    return data[release]["assets"][asset]["size"]
 
 
 def get_size_of_repo(data: list):
@@ -106,7 +106,9 @@ def unzip_file(file_path, output_path: str = ""):
 do_reload = True
 
 
-def check_for_updates_with_ui(tag_or_sha, user_files_path: str, edition: str = "debug"):
+def check_for_updates_with_ui(tag_or_sha, user_files_path: str,
+                              edition: str = "debug", save_old_files: bool = True,
+                              do_ask_user: bool = True):
 
     import tkinter as tk
     from tkinter import messagebox as msb
@@ -120,18 +122,24 @@ def check_for_updates_with_ui(tag_or_sha, user_files_path: str, edition: str = "
                 if not check_for_release_updates(tag_or_sha, releases):
                     return False
                 else:
-                    file_name = get_last_release_file_name(releases)
-                    main_file_url = get_last_release_update_link(releases)
-                    size_of_file = get_size_of_last_release(releases)
-                    new_tag_or_sha = get_last_release_tag(releases)
+                    asset = 0
+                    file_name = get_release_file_name(releases, asset)
+                    while not file_name[-4:] == ".zip":
+                        asset += 1
+                        file_name = get_release_file_name(releases, asset)
+
+                    main_file_url = get_release_update_link(releases)
+                    size_of_file = get_size_of_release(releases)
+                    new_tag_or_sha = get_release_tag(releases)
                     start_command = f''' "WABA v.Dev_B.exe" '''
                     do_make_version_file = False
                     do_pip_update_requirements = False
-                    if not msb.askyesno("Updater: Обновление", "Найдена новая версия приложения!\n"
-                                                               "Хотите обновить? "
-                                                               f"( ~{size_of_file // 1024 // 1024} MB )\n"
-                                                               "\n"
-                                                               f"{tag_or_sha} -> {new_tag_or_sha}\n"):
+                    if (not msb.askyesno("Updater: Обновление", "Найдена новая версия приложения!\n"
+                                                                "Хотите обновить? "
+                                                                f"( ~{size_of_file // 1024 // 1024} MB )\n"
+                                                                "\n"
+                                                                f"{tag_or_sha} -> {new_tag_or_sha}\n"))\
+                            or (not do_ask_user):
                         return False
             except Exception as err:
                 msb.showerror("Waba: сбой", f"Не удалось проверить наличие обновлений\n\n"
@@ -146,10 +154,10 @@ def check_for_updates_with_ui(tag_or_sha, user_files_path: str, edition: str = "
                     return False
                 else:
                     file_name = f"master.zip"
-                    commit_message = get_last_commit_message(commits)
+                    commit_message = get_commit_message(commits)
                     main_file_url = github_master_download_url
                     size_of_file = get_size_of_repo(repository) * 1024
-                    new_tag_or_sha = get_last_commit_sha(commits)
+                    new_tag_or_sha = get_commit_sha(commits)
                     start_command = "start_vB.cmd"
                     do_make_version_file = True
                     do_pip_update_requirements = True
@@ -157,7 +165,7 @@ def check_for_updates_with_ui(tag_or_sha, user_files_path: str, edition: str = "
                                                                "Хотите обновить? "
                                                                f"( ~{size_of_file // 1024 // 1024} MB )\n"
                                                                "\n"
-                                                               f"{tag_or_sha[:7]} -> {new_tag_or_sha[:7]}\n"
+                                                               f"{tag_or_sha[:7]} -> {new_tag_or_sha[:7]}\n\n"
                                                                f"Что нового:\n{commit_message}"):
                         return False
             except Exception as err:
@@ -272,6 +280,7 @@ def check_for_updates_with_ui(tag_or_sha, user_files_path: str, edition: str = "
             with open(f"updater/waba_additional_files/config.yaml", "w+") as config:
                 config_data = {
                     "do_make_version_file": do_make_version_file,
+                    "save_old_files": save_old_files,
                     "version": new_tag_or_sha,
                     "edition": edition,
                     "start_command": start_command
@@ -282,6 +291,7 @@ def check_for_updates_with_ui(tag_or_sha, user_files_path: str, edition: str = "
             shutil.copytree(f"updater/{folder_name}", f"{user_files_path}/waba_update_data")
             shutil.copytree(f"updater/waba_additional_files", f"{user_files_path}/waba_additional_files")
             shutil.copyfile(f"updater/installer.exe", f"{user_files_path}/installer.exe")
+            # Чистим чистим
             shutil.rmtree(f"updater/{folder_name}")
             shutil.rmtree(f"updater/waba_additional_files")
 

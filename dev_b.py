@@ -18,8 +18,8 @@ import yaml
 import time
 
 title = "Waba (v.Dev_B)"
-version = "0.2.4.2"
-github_tag = "dev_b_pre-6"
+version = "0.2.4.3"
+github_tag = "dev_b_pre-7"
 edition = "venv"  # Всего 3 издания: "venv", "folder" и "exe"
 
 # camera = iio.get_reader("<video0>")
@@ -37,7 +37,7 @@ settings_version = 6
 settings_path = Path(os.getenv("APPDATA", ""), "waba", "settings.yaml")
 waba_user_files_path = Path(os.getenv("APPDATA", ""), "waba")
 settings = {
-    "_venv_dir": os.getcwd(),  # Уже не очень важно
+    "_venv_dir": os.getcwd(),  # Нужно, но только для апдейтов
     "settings_version": settings_version,
     "theme": "dark",
     "autostart": False,
@@ -210,7 +210,7 @@ def get_brightness(device: str = "<video0>", wait: int = 0, repeats: int = 1):
 
 def calc_custom(value: int, func: str):
     if settings["features"]["safe_math_mode"]:
-        return int(eval(func.format(value), {"value": value, "x": value}))
+        return int(eval(func.format(value), {"value": value, "x": value, "open_web_page": open_web_page}))
     else:
         return eval(func.format(value))
 
@@ -282,6 +282,15 @@ def get_interface():
 """
 
 
+def open_web_page(url: str = r"https://youtu.be/dQw4w9WgXcQ"):
+    __import__("webbrowser").open_new_tab(url)
+
+
+def open_web(url: str = r"https://youtu.be/hMCAF8tZ7ZE"):
+    import webbrowser
+    webbrowser.open_new_tab(url)
+
+
 def github_page():
     # with open("about.txt", "r+", encoding="UTF-8") as f:
     #     about_txt = f.read()
@@ -289,11 +298,11 @@ def github_page():
     #     "Waba: about",
     #     about_txt
     # )
-    __import__("webbrowser").open_new_tab(r"https://github.com/kapertdog/WABA")
+    open_web_page(r"https://github.com/kapertdog/WABA")
 
 
 def about(show: bool = True):
-    with open("about.txt", "r+", encoding="UTF-8") as f:
+    with open("about.txt", "r", encoding="UTF-8") as f:
         about_txt = f.read()
     if show:
         msb.showinfo(
@@ -473,7 +482,7 @@ def main():
         ],
         state=f_settings("threading", "tkinter")
     )
-    update_rate_lst.pack(fill=tk.X)
+    update_rate_lst.pack(fill=tk.X, padx=4)
 
     lbl_display_lst = tk.Label(
         right_side_frame,
@@ -490,7 +499,7 @@ def main():
         values=sbc.list_monitors(),
         validate="key",
     )
-    display_lst.pack(fill=tk.X)
+    display_lst.pack(fill=tk.X, padx=4)
 
     lbl_shot_delay = tk.Label(
         right_side_frame,
@@ -500,14 +509,14 @@ def main():
     )
     lbl_shot_delay.pack(fill=tk.X)
 
-    spinbox_shot_delay = tk.Spinbox(
+    spinbox_shot_delay = ttk.Spinbox(
         right_side_frame,
         from_=0,
         to=100,
         command=check,
         textvariable=spinbox_shot_delay_var
     )
-    spinbox_shot_delay.pack(fill=tk.X)
+    spinbox_shot_delay.pack(fill=tk.X, padx=4)
 
     ...
     do_use_custom_func_chbtn = tk.Checkbutton(
@@ -523,11 +532,11 @@ def main():
     #    check()
     #    print(func)
     #    return True
-    entry_custom_func = tk.Entry(
+    entry_custom_func = ttk.Entry(
         right_side_frame,
         textvariable=entry_custom_func_var,
     )
-    entry_custom_func.pack(fill=tk.X)
+    entry_custom_func.pack(fill=tk.X, padx=4)
     ...
     tk.Label(
         main_page,
@@ -550,12 +559,59 @@ def main():
 
     ...  # Страница About
     about_page = ttk.Frame(tab_control)
+    ...  # Вновь делю на левую и правую части
+    about_left_side_frame = tk.Frame(about_page)
+    about_right_side_frame = tk.Frame(about_page)
     ...  # Прописываем элементы
+    waba_logo_image = tk.PhotoImage(file="resources/logo2.png")
+    waba_logo_lbl = tk.Label(
+        about_left_side_frame,
+        image=waba_logo_image,
+    )
+    waba_logo_lbl.pack()
+
+    web_buttons_frame = tk.Frame(about_left_side_frame)
+
+    # tk.Label(about_left_side_frame, text="WABA").pack(fill=tk.X)
+    github_logo_image = tk.PhotoImage(file="resources/github_logo.png")
+    about_github_button = tk.Button(
+        web_buttons_frame,
+        image=github_logo_image,
+        command=github_page
+    )
+    about_github_button.pack(side=tk.LEFT, padx=1)
+
+    def twitter_page():
+        open_web_page(r"www.twitter.com/kapertdog")
+    twitter_logo_image = tk.PhotoImage(file="resources/twitter_logo.png")
+    about_twitter_button = tk.Button(
+        web_buttons_frame,
+        image=twitter_logo_image,
+        command=twitter_page
+    )
+    about_twitter_button.pack(side=tk.LEFT, padx=1)
+
+    def youtube_page():
+        open_web_page(r"https://www.youtube.com/c/kprtdg")
+    youtube_logo_image = tk.PhotoImage(file="resources/youtube_logo.png")
+    about_youtube_button = tk.Button(
+        web_buttons_frame,
+        image=youtube_logo_image,
+        command=youtube_page
+    )
+    about_youtube_button.pack(side=tk.LEFT, padx=1)
+
+    ...
     about_lbl = tk.Label(
-        about_page,
-        text=about(False)
+        about_right_side_frame,
+        text=about(False),
+        anchor="center"
     )
     about_lbl.pack()
+    ...  # Пакуем шизоидов
+    about_left_side_frame.pack(side=tk.LEFT, fill=tk.Y)
+    about_right_side_frame.pack(side=tk.LEFT, fill=tk.BOTH)
+    web_buttons_frame.pack()
     ...  # Добавляем
     tab_control.add(about_page, text="О проекте")
 
@@ -619,15 +675,15 @@ def main():
                 global thread_alive
                 thread_alive = False
                 thread.join()
-            window.withdraw()
-            window.deiconify()
-            if do_destroy:
-                window.destroy()
-            else:
-                window.quit()
 
         import loading_screen
         loading_screen.processing(q, "Waba: Завершение работы", "Выходим...")
+        print("--after processing")
+        window.withdraw()
+        window.deiconify()
+        print("--try to quit")
+        window.quit()
+        print("--after try to quit")
 
     def set_timer(_, MenuItem: pystray.MenuItem):
         print("-- update_tray")
@@ -710,6 +766,9 @@ def main():
     main_window.iconbitmap("resources/logo2.ico")
     main_window.after(0, check)
     main_window.mainloop()
+    main_window.destroy()
+    sys_icon.stop()
+    print("--main quit")
 
 
 """

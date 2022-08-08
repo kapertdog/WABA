@@ -667,7 +667,7 @@ def main():
         main_window.after(0, main_window.deiconify)
         check()
 
-    def quit_all(icon: pystray.Icon = None, *_, window: tk.Tk = main_window, do_destroy=False):
+    def quit_all(icon: pystray.Icon = None, *_, window: tk.Tk = main_window):
         def q():
             if icon is not None:
                 icon.stop()
@@ -676,14 +676,15 @@ def main():
                 thread_alive = False
                 thread.join()
 
-        import loading_screen
-        loading_screen.processing(q, "Waba: Завершение работы", "Выходим...")
-        print("--after processing")
+        # import loading_screen
+        # loading_screen.processing(q, "Waba: Завершение работы", "Выходим...")
+        # print("-- after processing")
         window.withdraw()
+        q()
         window.deiconify()
-        print("--try to quit")
+        print("-- try to quit")
         window.quit()
-        print("--after try to quit")
+        print("-- after try to quit")
 
     def set_timer(_, MenuItem: pystray.MenuItem):
         print("-- update_tray")
@@ -752,7 +753,7 @@ def main():
         else:
             if msb.askyesno("Waba: закрыть приложение",
                             "Действительно хотите закрыть приложение?"):
-                quit_all(sys_icon, window=main_window, do_destroy=True)
+                quit_all(sys_icon, window=main_window)
     ...
     main_window.protocol('WM_DELETE_WINDOW', hide_window)
     # noinspection PyUnboundLocalVariable
@@ -768,7 +769,7 @@ def main():
     main_window.mainloop()
     main_window.destroy()
     sys_icon.stop()
-    print("--main quit")
+    print("-- main quit")
 
 
 """

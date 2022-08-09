@@ -278,9 +278,12 @@ def check_for_updates_with_ui(tag_or_sha, user_files_path: str,
                     address = r".\updater\install_requirements_to_new.cmd"
                 else:
                     address = r".\updater\install_requirements_to_global.cmd"
-                os.system(
-                    f'''powershell -Command "Start-Process '{address}' -Verb runAs"'''
-                )
+                if os.access(os.getcwd(), os.W_OK & os.R_OK):
+                    os.system(address)
+                else:
+                    os.system(
+                        f'''powershell -Command "Start-Process '{address}' -Verb runAs"'''
+                    )
                 os.remove(f"{user_files_path}/requirements.txt")
 
             update_status("Подготовка к установке...")

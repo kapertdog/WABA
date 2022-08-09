@@ -789,7 +789,7 @@ def check_for_updates(tag_or_sha, c_edition, user_files_path, save_old_files, do
         settings["_venv_dir"] = os.getcwd()
         save_settings()
         os.chdir(waba_user_files_path)
-        os.system(f'"{Path(waba_user_files_path, """installer.exe""")}"')
+        os.system(f'''powershell -Command "Start-Process 'installer.exe' -Verb runAs"''')
         global do_start
         do_start = False
         return True

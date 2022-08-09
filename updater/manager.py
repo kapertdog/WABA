@@ -202,12 +202,12 @@ def check_for_updates_with_ui(tag_or_sha, user_files_path: str,
     def update_status(status: str):
         lbl.config(text=f"-=- {status} -=-")
 
-    def download(url_address):
+    def download(url_address, out_folder):
         local_filename = url_address.split('/')[-1]
         update_status(f"Скачивание {local_filename}...")
         with requests.get(url_address, stream=True, allow_redirects=True) as r:
             r.raise_for_status()
-            with open(f"updater/{local_filename}", 'wb') as f:
+            with open(f"{out_folder}/{local_filename}", 'wb') as f:
                 # print(len(r.))
                 for chunk in r.iter_content(chunk_size=8192):
                     f.write(chunk)
@@ -218,66 +218,80 @@ def check_for_updates_with_ui(tag_or_sha, user_files_path: str,
     def update():
         try:
             import os
-            old_files = os.listdir("updater")
+            import shutil
+            old_files = os.listdir(user_files_path)
             pb.start()
+            # Если в выходе уже были файлы, удаляем
+            update_status("Чистим чистим...")
+            for file in old_files:
+                match file:
+                    case "settings.yaml":
+                        ...
+                    case _:
+                        old_file = Path(user_files_path, file)
+                        if old_file.is_dir():
+                            shutil.rmtree(old_file)
+                        else:
+                            os.remove(old_file)
+            del old_files
+            old_files = os.listdir(user_files_path)
+            # if os.path.exists(f"{user_files_path}/waba_update_data"):
+            #     shutil.rmtree(f"{user_files_path}/waba_update_data")
+            # if os.path.exists(f"{user_files_path}/waba_additional_files"):
+            #     shutil.rmtree(f"{user_files_path}/waba_additional_files")
+            # if os.path.exists(f"{user_files_path}/installer.exe"):
+            #     os.remove(f"{user_files_path}/installer.exe")
             # Разбираемся с основным файлом
-            download(main_file_url)
+            download(main_file_url, user_files_path)
             update_status("Распаковка косметики...")
             pb.stop()
             pb.config(mode="indeterminate")
             pb.start()
             window.update()
-            unzip_file(f"updater/{file_name}", "updater")
-            os.remove(f"updater/{file_name}")
-            folder_name = [item for item in os.listdir("updater") if item not in frozenset(old_files)][0]
+            unzip_file(f"{user_files_path}/{file_name}", user_files_path)
+            os.remove(f"{user_files_path}/{file_name}")
+            folder_name = [item for item in os.listdir(user_files_path) if item not in frozenset(old_files)][0]
 
             # Теперь с дополнительными
             pb.stop()
-            pb.config(maximum=0)
+            pb.config(maximum=5)
             pb["value"] = 0
             pb.start()
             update_status("Доп файлы...")
-            if not os.path.exists("updater/waba_additional_files"):
-                os.mkdir("updater/waba_additional_files")
+            if not os.path.exists(f"{user_files_path}/waba_additional_files"):
+                os.mkdir(f"{user_files_path}/waba_additional_files")
             add_files_list = list()
             for add_file_url in files_urls:
-                add_file_name = download(add_file_url)
+                add_file_name = download(add_file_url, f"{user_files_path}")
                 update_status(f"Распаковка {add_file_name}...")
-                unzip_file(f"updater/{add_file_name}", "updater/waba_additional_files")
+                unzip_file(f"{user_files_path}/{add_file_name}",
+                           f"{user_files_path}/waba_additional_files")
                 add_files_list.extend(
-                    [item for item in os.listdir("updater/waba_additional_files")
+                    [item for item in os.listdir(f"{user_files_path}/waba_additional_files")
                      if item not in frozenset(old_files)
                      ]
                 )
-            import shutil
             if do_pip_update_requirements:
-                shutil.copy2(Path("updater", folder_name, "requirements.txt"), "updater")
+                shutil.copy2(Path(user_files_path, folder_name, "requirements.txt"), user_files_path)
                 if not Path("venv").exists():
                     # unzip_file("updater/empty_venv.zip", "updater/waba_additional_files")
-                    os.system(
-                        r' ".\updater\install_requirements_to_new.cmd" '
-                    )
+                    address = r".\updater\install_requirements_to_new.cmd"
                 else:
-                    os.system(
-                        r' ".\updater\install_requirements_to_global.cmd" '
-                    )
-                os.remove("updater/requirements.txt")
+                    address = r".\updater\install_requirements_to_global.cmd"
+                os.system(
+                    f'''powershell -Command "Start-Process '{address}' -Verb runAs"'''
+                )
+                os.remove(f"{user_files_path}/requirements.txt")
 
             update_status("Подготовка к установке...")
             # Вытаскиваем дополнительные файлы из их папок
             for file in add_files_list:
-                if os.path.isdir(f"updater/waba_additional_files/{file}"):
-                    shutil.copytree(f"updater/waba_additional_files/{file}", "updater/waba_additional_files")
-                    shutil.rmtree(f"updater/waba_additional_files/{file}")
-            # Если в выходе уже были файлы, удаляем
-            if os.path.exists(f"{user_files_path}/waba_update_data"):
-                shutil.rmtree(f"{user_files_path}/waba_update_data")
-            if os.path.exists(f"{user_files_path}/waba_additional_files"):
-                shutil.rmtree(f"{user_files_path}/waba_additional_files")
-            if os.path.exists(f"{user_files_path}/installer.exe"):
-                os.remove(f"{user_files_path}/installer.exe")
+                if os.path.isdir(f"{user_files_path}/waba_additional_files/{file}"):
+                    shutil.copytree(f"{user_files_path}/waba_additional_files/{file}",
+                                    f"{user_files_path}/waba_additional_files")
+                    shutil.rmtree(f"{user_files_path}/waba_additional_files/{file}")
             # Создаём дополнительные файлы для установщика
-            with open(f"updater/waba_additional_files/config.yaml", "w+") as config:
+            with open(f"{user_files_path}/waba_additional_files/config.yaml", "w+") as config:
                 config_data = {
                     "do_make_version_file": do_make_version_file,
                     "save_old_files": save_old_files,
@@ -288,12 +302,10 @@ def check_for_updates_with_ui(tag_or_sha, user_files_path: str,
                 yaml.dump(config_data, config, default_flow_style=False)
                 ...
             # Переносим!!
-            shutil.copytree(f"updater/{folder_name}", f"{user_files_path}/waba_update_data")
-            shutil.copytree(f"updater/waba_additional_files", f"{user_files_path}/waba_additional_files")
+            shutil.copytree(f"{user_files_path}/{folder_name}", f"{user_files_path}/waba_update_data")
             shutil.copyfile(f"updater/installer.exe", f"{user_files_path}/installer.exe")
             # Чистим чистим
-            shutil.rmtree(f"updater/{folder_name}")
-            shutil.rmtree(f"updater/waba_additional_files")
+            shutil.rmtree(f"{user_files_path}/{folder_name}")
 
             window.destroy()
             ...

@@ -33,7 +33,7 @@ edition = "venv"  # Всего 3 издания: "venv", "folder" и "exe"
     Defaults
 """
 # Default settings values
-settings_version = 6
+settings_version = 7
 settings_path = Path(os.getenv("APPDATA", ""), "waba", "settings.yaml")
 waba_user_files_path = Path(os.getenv("APPDATA", ""), "waba")
 settings = {
@@ -59,17 +59,18 @@ settings = {
     "im_hiding_message": True,
     "notifications": True,
     # display
-    "device": "<video0>",
-    "display": None,
+    "devices": {},
     # snapshot
-    "cycle_timer": 60,
+    "cycle_timer": None,
     "timer_tick_delay": 1,
     "snapshot_delay": 1,
     "amount_of_shots": 1,
     # math
     "do_use_custom_method": False,
-    "module_method": "{} * 100 // 255 ** 2 // 100",
+    "module_method": "{} // 255 ** 2",
 }
+
+cashed_dict_of_devices = dict()
 
 timer_values_of_names = {
     "30 с.": 30,
@@ -206,6 +207,7 @@ def get_brightness(device: str = "<video0>", wait: int = 0, repeats: int = 1):
         msb.showerror("Waba: Ошибка настроек", f'Возможно, вы указали "0" в строке "amount_of_shots".\n'
                                                f'Так нельзя.\n\n'
                                                f'Ошибка Python: {err}')
+        raise ValueError(err)
 
 
 def calc_custom(value: int, func: str):
@@ -232,24 +234,41 @@ def calc_value_v2(value: int, *args: int):
     return result
 
 
-def update_brightness(icon: pystray.Icon = None, *_, method: str = None):
+def update_brightness(icon: pystray.Icon = None, *_):
+    print(f"-=- {time.ctime()} -=-")
     load_settings()
-    if settings["do_use_custom_method"] and (method is None):
-        method = settings["module_method"]
-    d = settings["display"]
-    old_b = sbc.get_brightness(d)[0]
-    cam_b = get_brightness(settings["device"], settings["snapshot_delay"], settings["amount_of_shots"])
-    if method:
-        m_b = calc_custom(cam_b, method)
-    else:
-        m_b = calc_value_v1(cam_b)
-    sbc.set_brightness(m_b, d)
-    if icon is not None and settings["notifications"]:
-        icon.notify(
-            f"{cam_b}/255 | {old_b}% -> {m_b}%",
-            "Яркость обновлена",
-        )
-    return d, old_b, cam_b, m_b
+    for device in settings["devices"]:
+        print(f"Камера: {device}")
+        disp = settings["devices"][device]["displays"]
+        reply = dict()
+        cam_b = get_brightness(device, settings["snapshot_delay"], settings["amount_of_shots"])
+        print(f"Яркость с камеры: {cam_b}/255")
+        for display in disp:
+            print(f"* Дисплей: {display}")
+            old_b = sbc.get_brightness(display)[0]
+            print(f"  * Яркость до изменения: {old_b}")
+            method = settings["devices"][device]["method"]
+            if method and method != "":
+                m_b = calc_custom(cam_b, method)
+            else:
+                m_b = calc_value_v1(cam_b)
+            print(f"  * После: {m_b}")
+            sbc.set_brightness(m_b, display)
+            reply[display] = {
+                "old_b": old_b,
+                "m_b": m_b
+            }
+        reply_text = f"Камера {device}:\n" \
+                     f"  {cam_b}/255"
+        for display_name in reply:
+            reply_text += f"\n{display_name}:\n" \
+                          f"  {reply[display_name]['old_b']}% -> {reply[display_name]['m_b']}%"
+        if icon is not None and settings["notifications"]:
+            icon.notify(
+                reply_text,
+                "Яркость обновлена",
+            )
+    # return d, old_b, cam_b, m_b
 
 
 thread_alive = True
@@ -266,6 +285,25 @@ def timer_thread(_):
                     msb.showerror("Waba: Сбой", f"{err}")
                 last_time = int(time.monotonic())
         time.sleep(settings["timer_tick_delay"])
+
+
+def check_device_exist(device: str = "<video0>"):
+    try:
+        test_reader = iio.get_reader(device)
+        test_reader.close()
+        del test_reader
+        return True
+    except IndexError:
+        return False
+
+
+def get_free_displays(dis: list, devices: dict) -> list:
+    free_displays = dis.copy()
+    for display in dis:
+        for device in devices:
+            if display in devices[device]["displays"]:
+                free_displays.remove(display)
+    return free_displays
 
 
 """
@@ -314,6 +352,7 @@ def about(show: bool = True):
 
 
 def main():
+    global settings
     main_window = tk.Tk()
     main_window.title("Waba - настройки")
     ...  # Подготовка переменных
@@ -323,15 +362,16 @@ def main():
         ...
         if settings["autostart"] != autostart_chbtn_var.get():
             settings["autostart"] = autostart(autostart_chbtn_var.get())
+        settings["devices"] = {}
+        for element in cashed_dict_of_devices:
+            # noinspection PyUnresolvedReferences
+            settings["devices"][element] = cashed_dict_of_devices[element].copy()
         settings["checking_for_updates"] = checking_for_updates_chbtn_var.get()
         settings["hiding_to_tray"] = hiding_to_tray_chbtn_var.get()
         settings["hide_after_start"] = hiding_when_start_chbtn_var.get()
         settings["notifications"] = notifications_chbtn_var.get()
         settings["cycle_timer"] = timer_values_of_names[update_rate_lst_var.get()]
-        settings["display"] = display_list_var.get()
         settings["snapshot_delay"] = spinbox_shot_delay_var.get()
-        settings["do_use_custom_method"] = do_use_custom_method_chbtn_var.get()
-        settings["module_method"] = entry_custom_func_var.get()
         save_settings()
         check()
 
@@ -341,10 +381,12 @@ def main():
     autostart_chbtn_var = tk.BooleanVar()
     checking_for_updates_chbtn_var = tk.BooleanVar()
     update_rate_lst_var = tk.StringVar()
-    display_list_var = tk.StringVar()
     spinbox_shot_delay_var = tk.IntVar()
-    do_use_custom_method_chbtn_var = tk.BooleanVar()
-    entry_custom_func_var = tk.StringVar()
+
+    turned_cam_chbtn_var = tk.BooleanVar()
+    displays_selected_device_var = tk.StringVar()
+    displays_is_its_zero_page = tk.BooleanVar()
+    displays_is_device_exist_var = tk.BooleanVar()
 
     def update():
         hiding_to_tray_chbtn_var.set(settings["hiding_to_tray"])
@@ -352,12 +394,52 @@ def main():
         notifications_chbtn_var.set(settings["notifications"])
         autostart_chbtn_var.set(settings["autostart"])
         checking_for_updates_chbtn_var.set(settings["checking_for_updates"])
-        display_list_var.set(settings["display"])
         update_rate_lst_var.set(timer_names_of_values[settings["cycle_timer"]])
         spinbox_shot_delay_var.set(settings["snapshot_delay"])
-        do_use_custom_method_chbtn_var.set(settings["do_use_custom_method"])
-        entry_custom_func_var.set(settings["module_method"])
+
+        displays_selected_device_var.set("<video0>")
     update()
+
+    def displays_update_lists(free_displays_list, selected_displays_list):
+        if len(left_list_box.get(0, tk.END)) > 0:
+            left_list_box.delete(0, tk.END)
+        if len(right_list_box.get(0, tk.END)) > 0:
+            right_list_box.delete(0, tk.END)
+        for i in free_displays_list:
+            left_list_box.insert(tk.END, i)
+        for i in selected_displays_list:
+            right_list_box.insert(tk.END, i)
+
+    def displays_page_update(do_check_cam=True):
+        if do_check_cam:
+            displays_is_device_exist_var.set(check_device_exist(displays_selected_device_var.get()))
+        else:
+            displays_is_device_exist_var.set(True)
+        displays_is_its_zero_page.set(displays_selected_device_var.get()[-2] == "0")
+        if displays_is_its_zero_page.get():
+            previous_cam_button.config(state="disabled")
+        else:
+            previous_cam_button.config(state="normal")
+        if displays_is_device_exist_var.get():
+            next_cam_button.config(state="normal")
+            turned_cam_chbtn.config(state="normal")
+        else:
+            next_cam_button.config(state="disabled")
+            turned_cam_chbtn.config(state="disabled")
+        turned_cam_chbtn_var.set(displays_selected_device_var.get() in cashed_dict_of_devices)
+        turned_cam_chbtn.config(text=f"Камера {displays_selected_device_var.get()}")
+        update_lists()
+        check()
+
+    def update_lists():
+        if turned_cam_chbtn_var.get():
+            # noinspection PyUnresolvedReferences
+            displays_update_lists(get_free_displays(sbc.list_monitors(), cashed_dict_of_devices),
+                                  cashed_dict_of_devices[displays_selected_device_var.get()]["displays"])
+        else:
+            displays_update_lists(get_free_displays(sbc.list_monitors(), cashed_dict_of_devices), [])
+        right_list_box.update()
+        left_list_box.update()
 
     def check():
         changes = 0
@@ -368,10 +450,8 @@ def main():
             changes += int(autostart_chbtn_var.get() != settings["autostart"])
             changes += int(checking_for_updates_chbtn_var.get() != settings["checking_for_updates"])
             changes += int(timer_values_of_names[update_rate_lst_var.get()] != settings["cycle_timer"])
-            changes += int(display_list_var.get() != settings["display"])
             changes += int(spinbox_shot_delay_var.get() != settings["snapshot_delay"])
-            changes += int(do_use_custom_method_chbtn_var.get() != settings["do_use_custom_method"])
-            changes += int(entry_custom_func_var.get() != settings["module_method"])
+            changes += int(not settings["devices"] == cashed_dict_of_devices)
         except Exception as err:
             msb.showerror("Waba: сбой при проверке настроек", f"{err}")
         if changes == 0:
@@ -484,23 +564,6 @@ def main():
     )
     update_rate_lst.pack(fill=tk.X, padx=4)
 
-    lbl_display_lst = tk.Label(
-        right_side_frame,
-        text="Дисплей:",
-        padx=10,
-        anchor="w"
-    )
-    lbl_display_lst.pack(fill=tk.X)
-
-    display_lst = ttk.Combobox(
-        right_side_frame,
-        postcommand=check,
-        textvariable=display_list_var,
-        values=sbc.list_monitors(),
-        validate="key",
-    )
-    display_lst.pack(fill=tk.X, padx=4)
-
     lbl_shot_delay = tk.Label(
         right_side_frame,
         text="Задержка кадра: ",
@@ -519,24 +582,6 @@ def main():
     spinbox_shot_delay.pack(fill=tk.X, padx=4)
 
     ...
-    do_use_custom_func_chbtn = tk.Checkbutton(
-        right_side_frame,
-        text="Своя функция",
-        anchor="w",
-        command=check,
-        variable=do_use_custom_method_chbtn_var,
-    )
-    do_use_custom_func_chbtn.pack(fill=tk.X)
-
-    # def validate_func(func):
-    #    check()
-    #    print(func)
-    #    return True
-    entry_custom_func = ttk.Entry(
-        right_side_frame,
-        textvariable=entry_custom_func_var,
-    )
-    entry_custom_func.pack(fill=tk.X, padx=4)
     ...
     tk.Label(
         main_page,
@@ -550,12 +595,207 @@ def main():
     ...  # Добавляем страничку
     tab_control.add(main_page, text="Главная")
 
+    ...  # Страница настроек камер / мониторов
+    displays_page = ttk.Frame(tab_control)
+    ...  # И вновь прописываю стороны
+    displays_top_line_frame = tk.Frame(displays_page, bg="#D8D8D8")
+    displays_lists_frame = tk.Frame(displays_page)
+    displays_lists_left_frame = tk.Frame(displays_lists_frame)
+    displays_lists_right_frame = tk.Frame(displays_lists_frame)
+    displays_lists_center_frame = tk.Frame(displays_lists_frame)
+    displays_downside_frame = tk.Frame(displays_page)
+    ...  # Прописываем элементы
+    # Literal["raised", "sunken", "flat", "ridge", "solid", "groove"]
+
+    def previous_cam_func():
+        if displays_selected_device_var.get()[:-2] != "0":
+            displays_selected_device_var.set(f"<video{int(displays_selected_device_var.get()[-2]) - 1}>")
+            displays_page_update()
+    previous_cam_button = tk.Button(
+        displays_top_line_frame,
+        text="<",
+        relief="flat",
+        command=previous_cam_func,
+        state="disabled"
+    )
+
+    def next_cam_func():
+        displays_selected_device_var.set(f"<video{int(displays_selected_device_var.get()[-2]) + 1}>")
+        displays_page_update()
+    previous_cam_button.pack(side=tk.LEFT, padx=5, pady=5)
+    next_cam_button = tk.Button(
+        displays_top_line_frame,
+        text=">",
+        relief="flat",
+        command=next_cam_func
+    )
+    next_cam_button.pack(side=tk.RIGHT, padx=5, pady=5)
+
+    def turned_cam_func():
+        global cashed_dict_of_devices
+        if turned_cam_chbtn_var.get():
+            cashed_dict_of_devices[displays_selected_device_var.get()] = \
+                {
+                    "displays": [],
+                    "method": None,
+                }
+        else:
+            copy_of_dict = dict()
+            for item in cashed_dict_of_devices:
+                copy_of_dict[item] = cashed_dict_of_devices[item].copy()
+            cashed_dict_of_devices = {}
+            for item in copy_of_dict:
+                if item != displays_selected_device_var.get():
+                    cashed_dict_of_devices[item] = copy_of_dict[item].copy()
+        print(cashed_dict_of_devices)
+        print(settings["devices"])
+        update_lists()
+        check()
+    turned_cam_chbtn = tk.Checkbutton(
+        displays_top_line_frame,
+        text="Камера <video0>",
+        command=turned_cam_func,
+        variable=turned_cam_chbtn_var,
+    )
+    turned_cam_chbtn.pack(anchor="center", side=tk.TOP, padx=5, pady=5)
+    ...
+    left_list_box_title = tk.Label(
+        displays_lists_left_frame,
+        text="Свободны:"
+    )
+    left_list_box_title.pack(fill=tk.X, anchor="center")
+    left_list_box_scrllbar = ttk.Scrollbar(
+        displays_lists_left_frame,
+    )
+    left_list_box_scrllbar.pack(fill=tk.Y, side=tk.RIGHT)
+    left_list_box = tk.Listbox(
+        displays_lists_left_frame,
+        height=6,
+        width=18,
+        yscrollcommand=left_list_box_scrllbar.set,
+        selectmode=tk.EXTENDED,
+    )
+    left_list_box.pack(fill=tk.X, side=tk.LEFT)
+
+    left_list_box_scrllbar.config(command=left_list_box.yview)
+
+    displays_lists_left_frame.pack(side=tk.LEFT)
+    ...
+    right_list_box_title = tk.Label(
+        displays_lists_right_frame,
+        text="Выбраны:"
+    )
+    right_list_box_title.pack()
+    right_list_box_scrllbar = ttk.Scrollbar(
+        displays_lists_right_frame,
+    )
+    right_list_box_scrllbar.pack(fill=tk.Y, side=tk.RIGHT)
+    right_list_box = tk.Listbox(
+        displays_lists_right_frame,
+        height=6,
+        width=18,
+        yscrollcommand=right_list_box_scrllbar.set,
+        selectmode=tk.EXTENDED,
+    )
+    right_list_box.pack(fill=tk.X, side=tk.LEFT)
+
+    right_list_box_scrllbar.config(command=right_list_box.yview)
+
+    displays_lists_right_frame.pack(side=tk.RIGHT)
+
+    def grab_all():
+        # noinspection PyUnresolvedReferences
+        cashed_dict_of_devices[displays_selected_device_var.get()]["displays"] = \
+                [*cashed_dict_of_devices[displays_selected_device_var.get()]["displays"].copy(),
+                 *get_free_displays(sbc.list_monitors(), cashed_dict_of_devices)]
+        update_lists()
+        check()
+    grab_all_btn = tk.Button(
+        displays_lists_center_frame,
+        text=">>",
+        width=2,
+        relief="flat",
+        command=grab_all
+    )
+    grab_all_btn.pack(anchor="center", padx=5)
+
+    def grab_selected():
+        for i in list(left_list_box.curselection()):
+            cashed_dict_of_devices[displays_selected_device_var.get()]["displays"] = \
+                    [*cashed_dict_of_devices[displays_selected_device_var.get()]["displays"].copy(),
+                     left_list_box.get(i)]
+        update_lists()
+        check()
+    grab_selected_btn = tk.Button(
+        displays_lists_center_frame,
+        text="->",
+        width=2,
+        command=grab_selected
+    )
+    grab_selected_btn.pack(anchor="center", padx=5)
+
+    def store_selected():
+        copy_of_list = [*cashed_dict_of_devices[displays_selected_device_var.get()]["displays"].copy()]
+        for i in list(right_list_box.curselection()):
+            copy_of_list.remove(right_list_box.get(i))
+        cashed_dict_of_devices[displays_selected_device_var.get()]["displays"] = \
+            [*copy_of_list.copy()]
+        update_lists()
+        check()
+    store_selected_btn = tk.Button(
+        displays_lists_center_frame,
+        text="<-",
+        width=2,
+        command=store_selected
+    )
+    store_selected_btn.pack(anchor="center", padx=5)
+
+    def store_all():
+        # noinspection PyUnresolvedReferences
+        cashed_dict_of_devices[displays_selected_device_var.get()]["displays"] = list()
+        update_lists()
+        check()
+    store_all_btn = tk.Button(
+        displays_lists_center_frame,
+        text="<<",
+        width=2,
+        relief="flat",
+        command=store_all
+    )
+    store_all_btn.pack(anchor="center", padx=5)
+
+    displays_lists_center_frame.pack(fill=tk.Y, anchor="center", pady=5)
+
+    method_entry_lbl = tk.Label(
+        displays_downside_frame,
+        text="Функция:",
+        state="disabled",
+    )
+    method_entry_lbl.pack(side=tk.LEFT)
+    method_entry = ttk.Entry(
+        displays_downside_frame,
+        state="disabled",
+    )
+    method_entry.pack(fill=tk.X, side=tk.LEFT)
+    get_photo_btn = tk.Button(
+        displays_downside_frame,
+        text="Сделать фото",
+        state="disabled",
+    )
+    get_photo_btn.pack(side=tk.RIGHT)
+    ...  # Пакуем глобальных шизоидов
+    displays_top_line_frame.pack(fill=tk.X, side=tk.TOP)
+    displays_lists_frame.pack()
+    displays_downside_frame.pack(fill=tk.BOTH, side=tk.BOTTOM, padx=5, pady=5)
+    ...  # Добавляем
+    tab_control.add(displays_page, text="Настройки")
+
     ...  # Страница дополнительных настроек
     settings_page = ttk.Frame(tab_control)
     ...  # Прописываем элементы
 
     ...  # Добавляем
-    tab_control.add(settings_page, text="Дополнительно")
+    tab_control.add(settings_page, text="Дополнительно", state="disabled")
 
     ...  # Страница About
     about_page = ttk.Frame(tab_control)
@@ -569,6 +809,12 @@ def main():
         image=waba_logo_image,
     )
     waba_logo_lbl.pack()
+
+    sub_waba_lbl = tk.Label(
+        about_left_side_frame,
+        text="Репозиторий и автор"
+    )
+    sub_waba_lbl.pack()
 
     web_buttons_frame = tk.Frame(about_left_side_frame)
 
@@ -622,15 +868,10 @@ def main():
             icon = sys_icon
         # subprocess.run(update_brightness, input=icon)
         try:
-            answ = update_brightness(icon)
+            update_brightness(icon)
         except Exception as err:
             msb.showerror("Waba: сбой", f"{err}")
             return
-        print(f"-=- {time.ctime()} -=-\n"
-              f"Дисплей: {answ[0]}\n"
-              f"Яркость до изменения: {answ[1]}/100%\n"
-              f"Данные с камеры: {answ[2]}/255\n"
-              f"Итоговая яркость: {answ[3]}/100%\n")
 
     check_button = tk.Button(
         bottom_frame,
@@ -650,12 +891,19 @@ def main():
     )
     submit_button.pack(side=tk.RIGHT)
     ...
+    displays_page_elements_list = [
+        left_list_box_title,
+        right_list_box_title, grab_all_btn, grab_selected_btn,
+        store_all_btn, store_selected_btn,
+    ]
 
     def check_two():
-        if do_use_custom_method_chbtn_var.get():
-            entry_custom_func.config(state="normal")
+        if turned_cam_chbtn_var.get():
+            for i in displays_page_elements_list:
+                i.config(state="normal")
         else:
-            entry_custom_func.config(state="disabled")
+            for i in displays_page_elements_list:
+                i.config(state="disabled")
         ...
     ...  # Упаковываем все странички
     tab_control.pack(expand=1, fill='both', padx=5, pady=5)
@@ -764,11 +1012,13 @@ def main():
     main_window.geometry("320x280")
     main_window.resizable(width=False, height=False)
     ...  # Финальная подготовка и запуск основного цикла!!
+    displays_page_update(do_check_cam=False)
     main_window.iconbitmap("resources/logo2.ico")
     main_window.after(0, check)
     main_window.mainloop()
     main_window.destroy()
-    sys_icon.stop()
+    if sys_icon is not None:
+        sys_icon.stop()
     print("-- main quit")
 
 
@@ -800,22 +1050,46 @@ def check_for_updates(tag_or_sha, c_edition, user_files_path, save_old_files, do
 
 
 if __name__ == "__main__":
-    displays = sbc.list_monitors()
-    if len(displays) == 0:
-        debug_window = tk.Tk()
-        debug_window.iconbitmap("logo2.ico")
-        debug_window.withdraw()
-        msb.showerror("Waba: Нет мониторов", "Нет данных о мониторах, прерываю запуск.\n"
-                                             "\n"
-                                             "Проверьте кабели, обновите драйвера и попробуйте снова"
-                      )
-        debug_window.quit()
-        exit(0)
-    settings["display"] = displays[0]
-    del displays
     load_settings()
     load_version_file()
     if settings["checking_for_updates"] and f_settings("autoupdate", "main"):
         check_for_updates(github_tag, edition, waba_user_files_path, True, True)
-    if do_start:
-        main()
+    try:
+        if do_start:
+            displays = sbc.list_monitors()
+            if len(displays) == 0:
+                debug_window = tk.Tk()
+                debug_window.iconbitmap("logo2.ico")
+                debug_window.withdraw()
+                msb.showerror("Waba: Нет мониторов", "Нет данных о мониторах, прерываю запуск.\n"
+                                                     "\n"
+                                                     "Проверьте кабели, обновите драйвера и попробуйте снова"
+                              )
+                debug_window.destroy()
+                raise LookupError
+            settings["display"] = displays[0]
+
+            if check_device_exist():
+                if settings["devices"] == {}:
+                    settings["devices"]["<video0>"] = {
+                        "displays": [displays[0]],
+                        "method": None,
+                    }
+            else:
+                debug_window = tk.Tk()
+                debug_window.iconbitmap("logo2.ico")
+                debug_window.withdraw()
+                msb.showerror("Waba: нет камер", "Нет доступных камер / датчиков, прерываю запуск.\n"
+                                                 "\n"
+                                                 "Проверьте подключена-ли хотя-бы одна камера и попробуйте снова")
+                debug_window.destroy()
+                raise LookupError
+            del displays
+
+            for cs in settings["devices"]:
+                # noinspection PyUnresolvedReferences
+                cashed_dict_of_devices[cs] = settings["devices"][cs].copy()
+
+            main()
+    except LookupError:
+        pass

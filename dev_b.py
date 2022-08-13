@@ -71,6 +71,7 @@ settings = {
 }
 
 cashed_dict_of_devices = dict()
+checked_cams = dict()
 
 timer_values_of_names = {
     "30 с.": 30,
@@ -411,10 +412,14 @@ def main():
             right_list_box.insert(tk.END, i)
 
     def displays_page_update(do_check_cam=True):
-        if do_check_cam:
+        if displays_selected_device_var.get() in checked_cams:
+            displays_is_device_exist_var.set(checked_cams[displays_selected_device_var.get()])
+        elif do_check_cam:
             displays_is_device_exist_var.set(check_device_exist(displays_selected_device_var.get()))
+            checked_cams[displays_selected_device_var.get()] = displays_is_device_exist_var.get()
         else:
             displays_is_device_exist_var.set(True)
+            checked_cams[displays_selected_device_var.get()] = displays_is_device_exist_var.get()
         displays_is_its_zero_page.set(displays_selected_device_var.get()[-2] == "0")
         if displays_is_its_zero_page.get():
             previous_cam_button.config(state="disabled")

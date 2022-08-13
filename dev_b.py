@@ -652,8 +652,6 @@ def main():
             for item in copy_of_dict:
                 if item != displays_selected_device_var.get():
                     cashed_dict_of_devices[item] = copy_of_dict[item].copy()
-        print(cashed_dict_of_devices)
-        print(settings["devices"])
         update_lists()
         check()
     turned_cam_chbtn = tk.Checkbutton(

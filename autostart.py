@@ -9,7 +9,7 @@ def autostart(switch: bool = True):
             startup_program_files = Path(programs(), "Startup",  "Waba.lnk")
             CreateShortcut(
                 Path=str(startup_program_files),
-                StartIn="",
+                StartIn=str(Path.cwd()),
                 Target="./WABA v.Dev_B.exe"
             )
             return True

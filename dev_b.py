@@ -18,7 +18,7 @@ import yaml
 import time
 
 title = "Waba (v.Dev_B)"
-version = "0.2.4.3"
+version = "0.3.0.0"
 github_tag = "dev_b_pre-7"
 edition = "venv"  # Всего 3 издания: "venv", "folder" и "exe"
 
@@ -46,7 +46,7 @@ settings = {
     "features": {
         # Обновляются только после перезапуска!!
         "autoupdate": True,
-        "autostart": True,
+        "autostart": False,
         "custom_icons": True,  # Пока ничего не делает
         "safe_math_mode": True,
         "threading": True,
@@ -830,15 +830,15 @@ def main():
     )
     about_github_button.pack(side=tk.LEFT, padx=1)
 
-    def twitter_page():
-        open_web_page(r"www.twitter.com/kapertdog")
-    twitter_logo_image = tk.PhotoImage(file="resources/twitter_logo.png")
-    about_twitter_button = tk.Button(
+    def linktree_page():
+        open_web_page(r"https://linktr.ee/kapertdog")
+    linktree_logo_image = tk.PhotoImage(file="resources/linktree_logo.png")
+    about_linktree_button = tk.Button(
         web_buttons_frame,
-        image=twitter_logo_image,
-        command=twitter_page
+        image=linktree_logo_image,
+        command=linktree_page
     )
-    about_twitter_button.pack(side=tk.LEFT, padx=1)
+    about_linktree_button.pack(side=tk.LEFT, padx=1)
 
     def youtube_page():
         open_web_page(r"https://www.youtube.com/c/kprtdg")

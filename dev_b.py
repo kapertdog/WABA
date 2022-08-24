@@ -33,20 +33,21 @@ edition = "venv"  # Всего 3 издания: "venv", "folder" и "exe"
     Defaults
 """
 # Default settings values
-settings_version = 7
+settings_version = 8
 settings_path = Path(os.getenv("APPDATA", ""), "waba", "settings.yaml")
 waba_user_files_path = Path(os.getenv("APPDATA", ""), "waba")
 settings = {
     "_venv_dir": os.getcwd(),  # Нужно, но только для апдейтов
     "settings_version": settings_version,
     "theme": "dark",
+    "language": "ru",
     "autostart": False,
     "checking_for_updates": False,
     # features
     "features": {
         # Обновляются только после перезапуска!!
         "autoupdate": True,
-        "autostart": False,
+        "autostart": edition != "venv",
         "custom_icons": True,  # Пока ничего не делает
         "safe_math_mode": True,
         "threading": True,
@@ -60,14 +61,17 @@ settings = {
     "notifications": True,
     # display
     "devices": {},
+    "displays": {},
     # snapshot
     "cycle_timer": None,
     "timer_tick_delay": 1,
     "snapshot_delay": 1,
     "amount_of_shots": 1,
+    "load_settings_every_update": False,
     # math
-    "do_use_custom_method": False,
-    "module_method": "{} // 255 ** 2",
+    "pre-save_values": False,  # Пока не работает
+    "sort_keyframes": True,
+    "keyframes_limit": 15
 }
 
 cashed_dict_of_devices = dict()
@@ -133,6 +137,13 @@ def migrate_settings(data):
     global settings
     print("-=- Происходит миграция -=-")
     data = check(data, settings)
+
+    match data["settings_version"]:
+        case 7:
+            msb.showwarning("Waba: миграция настроек", "Для корректной работы будут\n"
+                                                       "сброшены конфигурации камер и дисплеев.")
+            data["devices"] = {}
+
     data["settings_version"] = settings_version
     print("-=-  Успешная миграция  -=-")
     return data
@@ -177,6 +188,133 @@ def load_version_file():
         edition = data["edition"]
         github_tag = data["version"]
         version = f'{data["version"][:7]}'
+
+
+"""
+    Pre-matched values
+"""
+# Как-нибудь стоит сделать возможность хранить эти значения не только в оперативке
+
+displays_values = dict()
+devices_values = dict()
+
+
+def sort_keyframes(keyframes: tuple):
+    def check(key_f, out_l, start_at, end_at):
+        # print(key_f, start_at, end_at)
+        match (out_l[start_at][0] >= key_f[0], out_l[end_at][0] <= key_f[0]):
+            case True, True | False:
+                return start_at
+            case False, True:
+                return end_at + 1
+            case False, False:
+                return check(key_f, out_l, start_at, end_at - 1)
+    out_list = []
+    for index in range(len(keyframes)):
+        keyframe_by_index = keyframes[index]
+        # print(out_list)
+        if len(out_list) == 0:
+            out_list.append(keyframe_by_index)
+        else:
+            out_list.insert(
+                check(
+                    keyframe_by_index,
+                    out_list,
+                    0,
+                    len(out_list) - 1
+                ),
+                keyframe_by_index
+            )
+    return tuple(out_list)
+
+
+def generate_values(keyframes: tuple = tuple(), start_with: tuple = (0, 0), end_with: tuple = (255, 255)):
+    c_result = dict()
+    if settings["sort_keyframes"]:
+        keyframes = sort_keyframes(keyframes)
+    keyframes_list = [start_with, *keyframes, end_with]
+    # print(keyframes_list)
+    for i in range(len(keyframes_list) - 1):
+        from_x = keyframes_list[i][0]
+        from_y = keyframes_list[i][1]
+        to_x = keyframes_list[i+1][0]
+        to_y = keyframes_list[i+1][1]
+        steps = max(abs(from_x - to_x), abs(from_y - to_y))
+        # print(i, from_x, from_y, to_x, to_y, steps)
+        if steps != 0:
+            x_step = (- 1 * (from_x - to_x)) / steps
+            y_step = (- 1 * (from_y - to_y)) / steps
+
+            cashed_x = float(from_x)
+            cashed_y = float(from_y)
+            for n in range(steps):
+                if not str(int(cashed_x)) in c_result:
+                    c_result[str(int(cashed_x))] = list()
+                c_result[str(int(cashed_x))].append(int(cashed_y))
+                cashed_x += x_step
+                cashed_y += y_step
+    c_result[str(end_with[0])] = end_with[1]
+    g_result = list()
+    for n in c_result:
+        if type(c_result[n]) is list:
+            g_result.insert(int(n), int(mean(c_result[n])))
+            # g_result[n] = mean(c_result[n])
+        else:
+            g_result.insert(int(n), int(c_result[n]))
+    return g_result
+
+
+def generate_display_values(display: str):
+    if display in settings["displays"]:
+        keyframes = tuple(settings["displays"][display]["keyframes"])
+    else:
+        keyframes = ()
+    global displays_values
+    displays_values[display] = generate_values(keyframes, (0, 0), (255, 100))
+
+
+def generate_device_values(device: str):
+    if device in settings["devices"]:
+        keyframes = tuple(settings["devices"][device]["keyframes"])
+    else:
+        keyframes = ()
+    global devices_values
+    devices_values[device] = generate_values(keyframes, (0, 0), (255, 255))
+
+
+# noinspection PyUnresolvedReferences
+def add_device_keyframe(device: str, keyframe: (int, int)):
+    global settings
+    settings["devices"][device]["keyframes"].append(keyframe)
+    save_settings()
+    generate_device_values(device)
+    ...
+
+
+# noinspection PyUnresolvedReferences
+def add_display_keyframe(display: str, keyframe: (int, int)):
+    global settings
+    if display not in settings["displays"]:
+        settings["displays"][display] = {
+            "keyframes": []
+        }
+    settings["displays"][display]["keyframes"].append(list(keyframe))
+    save_settings()
+    generate_display_values(display)
+    ...
+
+
+def clear_displays_keyframes():
+    print("Сброс подстроечных значений")
+    cashed_displays_dict = dict()
+    for i in settings["displays"]:
+        cashed_displays_dict[i] = settings["displays"][i]
+    for display in cashed_displays_dict:
+        print(f'  "{display}", {len(cashed_displays_dict[display]["keyframes"])} эл. ...')
+        settings["displays"].pop(display)
+        generate_display_values(display)
+    print("Сохранение настроек...")
+    save_settings()
 
 
 """
@@ -237,39 +375,72 @@ def calc_value_v2(value: int, *args: int):
 
 def update_brightness(icon: pystray.Icon = None, *_):
     print(f"-=- {time.ctime()} -=-")
-    load_settings()
+    if settings["load_settings_every_update"]:
+        load_settings()
     for device in settings["devices"]:
         print(f"Камера: {device}")
         disp = settings["devices"][device]["displays"]
         reply = dict()
         cam_b = get_brightness(device, settings["snapshot_delay"], settings["amount_of_shots"])
-        print(f"Яркость с камеры: {cam_b}/255")
+        if device not in devices_values:
+            generate_device_values(device)
+            print("~ Просчитаны значения для этой камеры")
+            # print(devices_values[device])
+        m_cam_b = devices_values[device][cam_b]
+        print(f"Яркость с камеры: {cam_b}/255 -> {m_cam_b}")
         for display in disp:
             print(f"* Дисплей: {display}")
+            if display not in displays_values:
+                generate_display_values(display)
+                print("  ~ Просчитаны значения для этого дисплея")
+                # print(displays_values[display])
             old_b = sbc.get_brightness(display)[0]
             print(f"  * Яркость до изменения: {old_b}")
-            method = settings["devices"][device]["method"]
-            if method and method != "":
-                m_b = calc_custom(cam_b, method)
-            else:
-                m_b = calc_value_v1(cam_b)
+            m_b = displays_values[display][m_cam_b]
+            # method = settings["devices"][device]["method"]
+            # if method and method != "":
+            #     m_b = calc_custom(cam_b, method)
+            # else:
+            #     m_b = calc_value_v1(cam_b)
             print(f"  * После: {m_b}")
+            print()
             sbc.set_brightness(m_b, display)
             reply[display] = {
                 "old_b": old_b,
                 "m_b": m_b
             }
-        reply_text = f"Камера {device}:\n" \
-                     f"  {cam_b}/255"
+        # reply_text = f"Камера {device}:\n" \
+        #              f"  {cam_b}/255 -> {m_cam_b}"
+        reply_text = f"{device}: {cam_b}/255 ~ {m_cam_b}"
         for display_name in reply:
-            reply_text += f"\n{display_name}:\n" \
+            reply_text += f"\n{display_name.split(' ')[0]}:\n" \
                           f"  {reply[display_name]['old_b']}% -> {reply[display_name]['m_b']}%"
         if icon is not None and settings["notifications"]:
             icon.notify(
                 reply_text,
-                "Яркость обновлена",
+                f"Яркость обновлена",
             )
     # return d, old_b, cam_b, m_b
+
+
+def match_displays_brightness_at_state():
+    print(f"-=- {time.ctime()} -=-")
+    print("Соотнесение значений яркости")
+    for device in settings["devices"]:
+        print(f"Камера: {device}")
+        device_b = get_brightness(device, settings["snapshot_delay"], settings["amount_of_shots"])
+        if device not in devices_values:
+            generate_device_values(device)
+        device_m_b = devices_values[device][device_b]
+        print(f"{device_b}/255 ~ {device_m_b}/255")
+        for display in settings["devices"][device]["displays"]:
+            print(f"  Дисплей: {display}")
+            display_b = sbc.get_brightness(display)[0]
+            print(f"    Текущая яркость: {display_b}")
+            add_display_keyframe(display, (device_m_b, display_b))
+            print(f"    ~ Значения заготовлены")
+
+    print()
 
 
 thread_alive = True
@@ -642,7 +813,7 @@ def main():
             cashed_dict_of_devices[displays_selected_device_var.get()] = \
                 {
                     "displays": [],
-                    "method": None,
+                    "keyframes": [],
                 }
         else:
             copy_of_dict = dict()
@@ -950,11 +1121,26 @@ def main():
         save_settings()
         update()
         check()
+
+    def keep_state_in_mind():
+        if msb.askyesno("Waba: соотнесение значений",
+                        "Уверены?\n"
+                        "Соотнесение произойдёт для всех дисплеев сразу!"):
+            match_displays_brightness_at_state()
+
+    def reset_keyvalues():
+        if msb.askyesno("Waba: сброс значений",
+                        "Уверены?\n"
+                        "Будут сброшены подстроечные значения\n"
+                        "всех дисплеев и камер!"):
+            clear_displays_keyframes()
     ...
     if f_settings("tray", "main"):
         tray_menu = pystray.Menu(
             pystray.MenuItem("Открыть настройки", show_window, default=True),
             pystray.MenuItem("Обновить яркость", upd_bright, default=False),
+            pystray.MenuItem("Запомнить такую яркость", keep_state_in_mind, default=False),
+            pystray.MenuItem("Сбросить подстройку", reset_keyvalues, default=False),
             pystray.MenuItem("Обновлять раз в:", pystray.Menu(
                     pystray.MenuItem("Не обновлять", set_timer,
                                      lambda item: settings["cycle_timer"] is None, radio=True),
@@ -1076,7 +1262,7 @@ if __name__ == "__main__":
                 if settings["devices"] == {}:
                     settings["devices"]["<video0>"] = {
                         "displays": [displays[0]],
-                        "method": None,
+                        "keyframes": [],
                     }
             else:
                 debug_window = tk.Tk()

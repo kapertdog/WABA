@@ -40,14 +40,14 @@ settings = {
     "_venv_dir": os.getcwd(),  # Нужно, но только для апдейтов
     "settings_version": settings_version,
     "theme": "dark",
-    "language": "ru",
-    "autostart": False,
-    "checking_for_updates": False,
+    "language": None,
+    "autostart": edition != "venv",
+    "checking_for_updates": edition != "venv",
     # features
     "features": {
         # Обновляются только после перезапуска!!
         "autoupdate": True,
-        "autostart": edition != "venv",
+        "autostart": True,
         "custom_icons": True,  # Пока ничего не делает
         "safe_math_mode": True,
         "threading": True,
@@ -413,8 +413,8 @@ def update_brightness(icon: pystray.Icon = None, *_):
         #              f"  {cam_b}/255 -> {m_cam_b}"
         reply_text = f"{device}: {cam_b}/255 ~ {m_cam_b}"
         for display_name in reply:
-            reply_text += f"\n{display_name.split(' ')[0]}:\n" \
-                          f"  {reply[display_name]['old_b']}% -> {reply[display_name]['m_b']}%"
+            reply_text += f"\n{display_name.split(' ')[0]}:" \
+                          f" {reply[display_name]['old_b']}% -> {reply[display_name]['m_b']}%"
         if icon is not None and settings["notifications"]:
             icon.notify(
                 reply_text,
@@ -1278,6 +1278,9 @@ if __name__ == "__main__":
             for cs in settings["devices"]:
                 # noinspection PyUnresolvedReferences
                 cashed_dict_of_devices[cs] = settings["devices"][cs].copy()
+
+            if not settings["language"]:
+                settings["language"] = "ru"
 
             main()
     except LookupError:

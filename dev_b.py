@@ -199,33 +199,8 @@ displays_values = dict()
 devices_values = dict()
 
 
-def sort_keyframes(keyframes: tuple):
-    def check(key_f, out_l, start_at, end_at):
-        # print(key_f, start_at, end_at)
-        match (out_l[start_at][0] >= key_f[0], out_l[end_at][0] <= key_f[0]):
-            case True, True | False:
-                return start_at
-            case False, True:
-                return end_at + 1
-            case False, False:
-                return check(key_f, out_l, start_at, end_at - 1)
-    out_list = []
-    for index in range(len(keyframes)):
-        keyframe_by_index = keyframes[index]
-        # print(out_list)
-        if len(out_list) == 0:
-            out_list.append(keyframe_by_index)
-        else:
-            out_list.insert(
-                check(
-                    keyframe_by_index,
-                    out_list,
-                    0,
-                    len(out_list) - 1
-                ),
-                keyframe_by_index
-            )
-    return tuple(out_list)
+def sort_keyframes(keyframes: tuple | list) -> tuple:
+    return tuple(sorted(keyframes, key=lambda x: x[0]))
 
 
 def generate_values(keyframes: tuple = tuple(), start_with: tuple = (0, 0), end_with: tuple = (255, 255)):

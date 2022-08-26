@@ -94,12 +94,11 @@ def check_differences():
     return _check(default_lang["main.json"]["data"], current_lang["main.json"]["data"])
 
 
-def info(file: str, lang: str = None):
-    fl = dict()
-    if not lang and Path(file).exists():
-        fl = _load(Path(lang, file))
-    elif Path("languages", "data", lang, file).exists():
-        fl = _load(Path("languages", "data", lang, file))
+def info(loaded_file_name):
+    return current_lang[loaded_file_name]["info"],
+
+
+def file_info(file):
     ...
 
 
@@ -140,28 +139,37 @@ def make_translate(lang_to: str):
 """ Обработка запросов """
 
 
-def get(file, section=None, sub_section=None, element=None):
-    if not section:
+def decompose(data, *args):
+    copy_of_args = [*args]
+    if args != ():
+        return decompose(data[copy_of_args.pop(0)], *copy_of_args)
+    return data
+
+
+def get(file, *args):
+    if not args:
         if file in current_lang:
             return current_lang[file]
         elif file in default_lang:
             return default_lang[file]
     else:
         try:
-            return current_lang[file]["data"][section][sub_section][element]
+            return decompose(current_lang[file]["data"], *args)
         except KeyError:
-            return default_lang[file]["data"][section][sub_section][element]
+            return decompose(default_lang[file]["data"], *args)
 
 
 """ Инструменты для разработки """
 
 """ Точка входа """
 if __name__ == "__main__":
-    ...
-    # cli_edit()
-    # os.chdir(Path().absolute().parent)
-    # make_translate("uk")
-    # load("auto-en")
+    os.chdir(Path().absolute().parent)
+    print("Доступные языки:")
+    for i in googletrans.LANGUAGES:
+        print(f"[{i}]: {googletrans.LANGUAGES[i]}")
+    lang = input("Перевести на: ")
+    make_translate(lang)
+    load("auto-" + lang)
     # print(get("main.json", "brightness_update", "update_brightness", "brightness_updated"))
     # print(get("about.json"))
-    # print(check_differences())
+    print(check_differences())

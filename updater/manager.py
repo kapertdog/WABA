@@ -227,6 +227,8 @@ def check_for_updates_with_ui(tag_or_sha, user_files_path: str,
                 match file:
                     case "settings.yaml":
                         ...
+                    case "cashed":
+                        ...
                     case _:
                         old_file = Path(user_files_path, file)
                         if old_file.is_dir():

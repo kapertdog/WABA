@@ -4,6 +4,7 @@
     Взаимодействует с основным кодом, подготавливает файлы для установщика.
 """
 import os
+import shutil
 from pathlib import Path
 import requests
 import zipfile
@@ -17,16 +18,27 @@ project = "WABA"
 github_repository_url = f"https://api.github.com/repos/{user}/{project}"
 github_releases_url = f"{github_repository_url}/releases"
 github_commits_url = f"{github_repository_url}/commits"
-github_master_download_url = f"https://github.com/{user}/{project}/archive/refs/heads/master.zip"
+github_repository_download_url = \
+    f"https://github.com/{user}/{project}/archive/refs/heads/"
+github_master_download_url = \
+    f"https://github.com/{user}/{project}/archive/refs/heads/master.zip"
 
 
 def setup(user_name, project_name):
-    global github_releases_url, github_commits_url
-    github_releases_url = f"https://api.github.com/repos/{user_name}/{project_name}/releases"
-    github_commits_url = f"https://api.github.com/repos/{user_name}/{project_name}/commits"
+    global github_repository_url, github_releases_url, github_commits_url, \
+        github_repository_download_url, github_master_download_url
+    github_repository_url = f"https://api.github.com/repos/{user_name}/{project_name}"
+    github_releases_url = f"{github_repository_url}/releases"
+    github_commits_url = f"{github_repository_url}/commits"
+    github_repository_download_url = \
+        f"https://github.com/{user_name}/{project_name}/archive/refs/heads/"
+    github_master_download_url = \
+        f"https://github.com/{user_name}/{project_name}/archive/refs/heads/master.zip"
 
 
 setup(user, project)
+
+""" API """
 
 
 def get_github_repository_json():
@@ -69,6 +81,15 @@ def get_release_file_name(data: list, asset: int = 0, release: int = 0):
     return data[release]["assets"][asset]["name"]
 
 
+def get_release_file_name_end_with(data: list, end_with: str, release: int = 0):
+    asset = 0
+    file = get_release_file_name(data, asset, release)
+    while file[-4:] != end_with:
+        asset += 1
+        file = get_release_file_name(data, asset, release)
+    return file, asset
+
+
 def get_size_of_release(data: list, asset: int = 0, release: int = 0):
     return data[release]["assets"][asset]["size"]
 
@@ -77,31 +98,124 @@ def get_size_of_repo(data: list):
     return data["size"]
 
 
+""" Функциональность """
+
+
+def make_config_file(config_file_path: Path, app_dir: Path,
+                     version: str, edition: str, save_old_files: bool,
+                     do_make_version_file: bool, start_command: str):
+    with open(Path(config_file_path, "config.yaml"), "w+") as config:
+        config_data = {
+            "app_dir": app_dir,
+            "version": version,
+            "edition": edition,
+            "do_make_version_file": do_make_version_file,
+            "save_old_files": save_old_files,
+            "start_command": start_command,
+        }
+        yaml.dump(config_data, config, default_flow_style=False)
+        ...
+
+
 def clear_temporary_installer():
     installer_path = Path(os.getenv("APPDATA", ""), "waba", "installer.exe")
     if installer_path.exists():
         os.remove(installer_path)
 
 
-def download_file(url):
+def _download_file(url, path=Path()):
     local_filename = url.split('/')[-1]
     with requests.get(url, stream=True, allow_redirects=True) as r:
         r.raise_for_status()
-        with open(local_filename, 'wb') as f:
+        with open(Path(path, local_filename), 'wb') as f:
             # print(len(r.))
             for chunk in r.iter_content(chunk_size=8192):
                 f.write(chunk)
-    return local_filename
+    return Path(path, local_filename)
 
 
-def unzip_file(file_path, output_path: str = ""):
+def _unzip_file(file_path, output_path: str = ""):
     with zipfile.ZipFile(file_path, "r") as file:
         file.extractall(output_path)
 
 
-"""
-    Интерфейс
-"""
+def download_update(edition, version, releases: list = None):
+    cash_path = Path(os.getenv("APPDATA", ""), "waba", "cashed", "update")
+    data_path = Path(os.getenv("APPDATA", ""), "waba", "update")
+    update_data_path = Path(data_path, "waba_update_data")
+    additional_data_path = Path(data_path, "waba_additional_files")
+    if cash_path.exists():
+        shutil.rmtree(cash_path)
+    os.makedirs(cash_path)
+    if data_path.exists():
+        shutil.rmtree(data_path)
+    os.makedirs(data_path)
+    if update_data_path.exists():
+        shutil.rmtree(update_data_path)
+    os.makedirs(update_data_path)
+    if additional_data_path.exists():
+        shutil.rmtree(additional_data_path)
+    os.makedirs(additional_data_path)
+
+    match edition:
+        case "folder":
+            if not releases:
+                releases = get_github_releases_json()
+            file_name, asset = get_release_file_name_end_with(releases, ".zip", version)
+
+            downloaded_file_path = _download_file(
+                get_release_update_link(releases, asset, version),
+                cash_path)
+
+            _unzip_file(downloaded_file_path, cash_path)
+            os.remove(downloaded_file_path)
+            make_config_file(additional_data_path, os.getcwd(), version, edition,
+                             True, False, f''' "WABA v.Dev_B.exe" ''')
+            shutil.copyfile(Path("updater", "installer.exe"),
+                            Path(data_path, "installer.exe"))
+        case "exe":
+            if not releases:
+                releases = get_github_releases_json()
+            file_name, asset = get_release_file_name_end_with(releases, ".exe", version)
+
+            _download_file(get_release_update_link(releases, asset, version), cash_path)
+        case "venv":
+            downloaded_file_path = _download_file(
+                github_repository_download_url + version + ".zip")
+            _unzip_file(downloaded_file_path, cash_path)
+            os.remove(downloaded_file_path)
+            make_config_file(additional_data_path, os.getcwd(),
+                             get_commit_sha(get_github_commits_json(), 0), edition,
+                             True, True, "start start_vB.cmd")
+
+            shutil.copy2(Path(cash_path, os.listdir(cash_path)[0], "requirements.txt"),
+                         data_path.parent)
+            if not Path("venv").exists():
+                # unzip_file("updater/empty_venv.zip", "updater/waba_additional_files")
+                address = r".\updater\install_requirements_to_new.cmd"
+            else:
+                address = r".\updater\install_requirements_to_global.cmd"
+            if os.access(os.getcwd(), os.W_OK & os.R_OK):
+                os.system(address)
+            else:
+                os.system(
+                    f'''powershell -Command "Start-Process '{address}' -Verb runAs"'''
+                )
+            os.remove(Path(data_path.parent, "requirements.txt"))
+
+            shutil.copyfile(Path("updater", "installer.exe"), Path(cash_path, "installer.exe"))
+    for item in os.listdir(cash_path):
+        file = Path(cash_path, item)
+        if file.is_dir():
+            for sub_file in os.listdir(file):
+                shutil.move(Path(file, sub_file), update_data_path)
+            # shutil.copytree(file, update_data_path)
+        elif file.is_file():
+            shutil.move(file, data_path)
+    shutil.rmtree(cash_path)
+
+
+""" Интерфейс """
 
 do_reload = True
 
@@ -124,21 +238,23 @@ def check_for_updates_with_ui(tag_or_sha, user_files_path: str,
                 else:
                     asset = 0
                     file_name = get_release_file_name(releases, asset)
-                    while not file_name[-4:] == ".zip":
+                    while file_name[-4:] != ".zip":
                         asset += 1
                         file_name = get_release_file_name(releases, asset)
 
-                    main_file_url = get_release_update_link(releases)
+                    main_file_url = get_release_update_link(releases, asset)
                     size_of_file = get_size_of_release(releases)
                     new_tag_or_sha = get_release_tag(releases)
                     start_command = f''' "WABA v.Dev_B.exe" '''
                     do_make_version_file = False
                     do_pip_update_requirements = False
-                    if (not msb.askyesno("Updater: Обновление", "Найдена новая версия приложения!\n"
-                                                                "Хотите обновить? "
-                                                                f"( ~{size_of_file // 1024 // 1024} MB )\n"
-                                                                "\n"
-                                                                f"{tag_or_sha} -> {new_tag_or_sha}\n"))\
+                    if (not msb.askyesno(
+                            "Updater: Обновление",
+                            "Найдена новая версия приложения!\n"
+                            "Хотите обновить? "
+                            f"( ~{size_of_file // 1024 // 1024} MB )\n"
+                            "\n"
+                            f"{tag_or_sha} -> {new_tag_or_sha}\n"))\
                             or (not do_ask_user):
                         return False
             except Exception as err:
@@ -161,12 +277,13 @@ def check_for_updates_with_ui(tag_or_sha, user_files_path: str,
                     start_command = "start_vB.cmd"
                     do_make_version_file = True
                     do_pip_update_requirements = True
-                    if not msb.askyesno("Updater: Обновление", "Найдена новая версия приложения!\n"
-                                                               "Хотите обновить? "
-                                                               f"( ~{size_of_file // 1024 // 1024} MB )\n"
-                                                               "\n"
-                                                               f"{tag_or_sha[:7]} -> {new_tag_or_sha[:7]}\n\n"
-                                                               f"Что нового:\n{commit_message}"):
+                    if not msb.askyesno("Updater: Обновление",
+                                        "Найдена новая версия приложения!\n"
+                                        "Хотите обновить? "
+                                        f"( ~{size_of_file // 1024 // 1024} MB )\n"
+                                        "\n"
+                                        f"{tag_or_sha[:7]} -> {new_tag_or_sha[:7]}\n\n"
+                                        f"Что нового:\n{commit_message}"):
                         return False
             except Exception as err:
                 msb.showerror("Waba: сбой", f"Не удалось проверить наличие обновления\n\n"
@@ -250,9 +367,10 @@ def check_for_updates_with_ui(tag_or_sha, user_files_path: str,
             pb.config(mode="indeterminate")
             pb.start()
             window.update()
-            unzip_file(f"{user_files_path}/{file_name}", user_files_path)
+            _unzip_file(f"{user_files_path}/{file_name}", user_files_path)
             os.remove(f"{user_files_path}/{file_name}")
-            folder_name = [item for item in os.listdir(user_files_path) if item not in frozenset(old_files)][0]
+            folder_name = [item for item in os.listdir(user_files_path)
+                           if item not in frozenset(old_files)][0]
 
             # Теперь с дополнительными
             pb.stop()
@@ -266,15 +384,16 @@ def check_for_updates_with_ui(tag_or_sha, user_files_path: str,
             for add_file_url in files_urls:
                 add_file_name = download(add_file_url, f"{user_files_path}")
                 update_status(f"Распаковка {add_file_name}...")
-                unzip_file(f"{user_files_path}/{add_file_name}",
-                           f"{user_files_path}/waba_additional_files")
+                _unzip_file(f"{user_files_path}/{add_file_name}",
+                            f"{user_files_path}/waba_additional_files")
                 add_files_list.extend(
                     [item for item in os.listdir(f"{user_files_path}/waba_additional_files")
                      if item not in frozenset(old_files)
                      ]
                 )
             if do_pip_update_requirements:
-                shutil.copy2(Path(user_files_path, folder_name, "requirements.txt"), user_files_path)
+                shutil.copy2(Path(user_files_path, folder_name, "requirements.txt"),
+                             user_files_path)
                 if not Path("venv").exists():
                     # unzip_file("updater/empty_venv.zip", "updater/waba_additional_files")
                     address = r".\updater\install_requirements_to_new.cmd"
@@ -302,13 +421,16 @@ def check_for_updates_with_ui(tag_or_sha, user_files_path: str,
                     "save_old_files": save_old_files,
                     "version": new_tag_or_sha,
                     "edition": edition,
-                    "start_command": start_command
+                    "start_command": start_command,
+                    "app_dir": os.getcwd()
                 }
                 yaml.dump(config_data, config, default_flow_style=False)
                 ...
             # Переносим!!
-            shutil.copytree(f"{user_files_path}/{folder_name}", f"{user_files_path}/waba_update_data")
-            shutil.copyfile(f"updater/installer.exe", f"{user_files_path}/installer.exe")
+            shutil.copytree(f"{user_files_path}/{folder_name}",
+                            f"{user_files_path}/waba_update_data")
+            shutil.copyfile(f"updater/installer.exe",
+                            f"{user_files_path}/installer.exe")
             # Чистим чистим
             shutil.rmtree(f"{user_files_path}/{folder_name}")
 
@@ -327,3 +449,10 @@ def check_for_updates_with_ui(tag_or_sha, user_files_path: str,
     window.mainloop()
     global do_reload
     return do_reload
+
+
+if __name__ == "__main__":
+    rl = get_github_releases_json()
+    for i in rl[0]["assets"]:
+        print(i)
+    print(get_release_file_name_end_with(rl, ".zip"))

@@ -5,7 +5,7 @@
     Заменяет старые файлы новыми.
     Должен быть сразу exe и поставляться вместе с основной программой~
 """
-print("\n# WABA INSTALLER v0.0.1\n\n")
+print("\n# WABA INSTALLER v0.0.2\n\n")
 
 
 import progress.spinner
@@ -22,14 +22,6 @@ from pathlib import Path
 pb.update()
 import filecmp
 pb.update()
-
-
-def get_app_directory():
-#    settings_path = Path(os.getenv("APPDATA", ""), "waba", "settings.yaml")
-#    with settings_path.open("r") as s:
-#        return yaml.safe_load(s)["_venv_dir"]
-    with open("settings.yaml") as s:
-        return yaml.safe_load(s)["_venv_dir"]
 
 
 from progress.bar import IncrementalBar
@@ -65,9 +57,9 @@ def update(from_dir: Path, to_dir: Path):
 
 
 pb.update()
-
-app_dir = get_app_directory()
 # shutil.rmtree(app_dir)
+
+os.system("timeout 5")
 
 pb.message = "Finding config file..."
 pb.update()
@@ -76,6 +68,8 @@ pb.update()
 with open("waba_additional_files/config.yaml", "r+") as file_config:
     config = yaml.safe_load(file_config)
 os.remove("waba_additional_files/config.yaml")
+
+app_dir = config["app_dir"]
 
 if os.path.exists("waba_additional_files/version.yaml"):
     os.remove("waba_additional_files/version.yaml")

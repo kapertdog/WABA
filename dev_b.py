@@ -18,9 +18,10 @@ import yaml
 import time
 
 title = "Waba (v.Dev_B)"
-version = "0.3.0.0"
-github_tag = "dev_b_pre-7"
+version = "0.3.1.0"
+github_tag = "dev_b_pre-9"
 edition = "venv"  # Всего 3 издания: "venv", "folder" и "exe"
+branch = "master"  # Пока планирую 2 ветки: "master" и "only-tray"
 
 # camera = iio.get_reader("<video0>")
 # screenshot = camera.get_data(0)
@@ -279,7 +280,7 @@ def add_display_keyframe(display: str, keyframe: (int, int)):
     ...
 
 
-def clear_displays_keyframes():
+def clear_displays_keyframes(icon: pystray.Icon = None):
     print("Сброс подстроечных значений")
     cashed_displays_dict = dict()
     for i in settings["displays"]:
@@ -288,8 +289,34 @@ def clear_displays_keyframes():
         print(f'  "{display}", {len(cashed_displays_dict[display]["keyframes"])} эл. ...')
         settings["displays"].pop(display)
         generate_display_values(display)
-    print("Сохранение настроек...")
+    print("Сохранение настроек...\n")
     save_settings()
+    if icon and settings["notifications"]:
+        icon.notify(
+            "Восстановлены значения по умолчанию",
+            "Подстройка сброшена"
+        )
+
+
+def match_displays_brightness_at_state(icon: pystray.Icon = None):
+    print(f"-=- {time.ctime()} -=-")
+    print("Соотнесение значений яркости")
+    for device in settings["devices"]:
+        print(f"Камера: {device}")
+        device_b = get_brightness(device, settings["snapshot_delay"], settings["amount_of_shots"])
+        if device not in devices_values:
+            generate_device_values(device)
+        device_m_b = devices_values[device][device_b]
+        print(f"{device_b}/255 ~ {device_m_b}/255")
+        for display in settings["devices"][device]["displays"]:
+            print(f"  Дисплей: {display}")
+            display_b = sbc.get_brightness(display)[0]
+            print(f"    Текущая яркость: {display_b}")
+            add_display_keyframe(display, (device_m_b, display_b))
+            print(f"    ~ Значения заготовлены")
+    if icon and settings["notifications"]:
+        icon.notify("Авто-подстройка откалибрована с учётом новых данных", "Соотнесение завершено")
+    print()
 
 
 """
@@ -297,7 +324,6 @@ def clear_displays_keyframes():
 """
 
 
-# noinspection GrazieInspection
 def get_brightness(device: str = "<video0>", wait: int = 0, repeats: int = 1):
     """
     Returns the brightness received from the camera
@@ -386,36 +412,17 @@ def update_brightness(icon: pystray.Icon = None, *_):
             }
         # reply_text = f"Камера {device}:\n" \
         #              f"  {cam_b}/255 -> {m_cam_b}"
-        reply_text = f"{device}: {cam_b}/255 ~ {m_cam_b}"
+        # reply_text = f"{device}: {cam_b}/255 ~ {m_cam_b}"
+        reply_text = ""
         for display_name in reply:
-            reply_text += f"\n{display_name.split(' ')[0]}:" \
-                          f" {reply[display_name]['old_b']}% -> {reply[display_name]['m_b']}%"
+            reply_text += f"{display_name.split(' ')[0]}:" \
+                          f" {reply[display_name]['old_b']}% -> {reply[display_name]['m_b']}%\n"
         if icon is not None and settings["notifications"]:
             icon.notify(
                 reply_text,
                 f"Яркость обновлена",
             )
     # return d, old_b, cam_b, m_b
-
-
-def match_displays_brightness_at_state():
-    print(f"-=- {time.ctime()} -=-")
-    print("Соотнесение значений яркости")
-    for device in settings["devices"]:
-        print(f"Камера: {device}")
-        device_b = get_brightness(device, settings["snapshot_delay"], settings["amount_of_shots"])
-        if device not in devices_values:
-            generate_device_values(device)
-        device_m_b = devices_values[device][device_b]
-        print(f"{device_b}/255 ~ {device_m_b}/255")
-        for display in settings["devices"][device]["displays"]:
-            print(f"  Дисплей: {display}")
-            display_b = sbc.get_brightness(display)[0]
-            print(f"    Текущая яркость: {display_b}")
-            add_display_keyframe(display, (device_m_b, display_b))
-            print(f"    ~ Значения заготовлены")
-
-    print()
 
 
 thread_alive = True
@@ -432,6 +439,33 @@ def timer_thread(_):
                     msb.showerror("Waba: Сбой", f"{err}")
                 last_time = int(time.monotonic())
         time.sleep(settings["timer_tick_delay"])
+
+
+downloader_busy = False
+
+
+def download_thread(icon: pystray.Icon, e, v, do_at_end=None):
+    import updater.manager
+    global downloader_busy
+    downloader_busy = True
+    if icon and settings["notifications"]:
+        icon.notify("Можете продолжать пользоваться приложением",
+                    "Загружается обновление...")
+
+    try:
+        updater.manager.download_update(e, v)
+    except Exception as err:
+        msb.showerror("Waba: ошибка загрузки обновления", f"{err}")
+        downloader_busy = False
+        return False
+
+    if icon and settings["notifications"]:
+        icon.notify("Загляните в Доп. настройки что-бы установить",
+                    "Обновление загрузилось!")
+    if do_at_end:
+        do_at_end()
+    downloader_busy = False
+    return True
 
 
 def check_device_exist(device: str = "<video0>"):
@@ -612,7 +646,21 @@ def main():
             submit_button.config(state="active")
             main_window.update()
         check_two()
-        ...
+    ...
+
+    def install_update(icon):
+        match edition:
+            case "venv" | "folder":
+                os.chdir(Path(waba_user_files_path, "update"))
+                if os.access(settings["_venv_dir"], os.W_OK & os.R_OK):
+                    os.system("start installer.exe")
+                else:
+                    os.system(f'''powershell -Command "Start-Process 'installer.exe' -Verb runAs"''')
+            case "exe":
+                os.chdir(Path(waba_user_files_path, "update"))
+                os.system("start install-waba.exe")
+        quit_all(icon)
+
     ...  # Распределение главных фреймов
     tab_control = ttk.Notebook(main_window)  # По-сути верхний фрейм
     bottom_frame = tk.Frame(main_window, padx=10, pady=10, background="#ABB2B9")
@@ -746,7 +794,7 @@ def main():
     ...  # Добавляем страничку
     tab_control.add(main_page, text="Главная")
 
-    ...  # Страница настроек камер / мониторов
+    ...  # Страница соотношения камер и мониторов
     displays_page = ttk.Frame(tab_control)
     ...  # И вновь прописываю стороны
     displays_top_line_frame = tk.Frame(displays_page, bg="#D8D8D8")
@@ -760,7 +808,8 @@ def main():
 
     def previous_cam_func():
         if displays_selected_device_var.get()[:-2] != "0":
-            displays_selected_device_var.set(f"<video{int(displays_selected_device_var.get()[-2]) - 1}>")
+            displays_selected_device_var.set(
+                f"<video{int(displays_selected_device_var.get()[-2]) - 1}>")
             displays_page_update()
     previous_cam_button = tk.Button(
         displays_top_line_frame,
@@ -771,7 +820,8 @@ def main():
     )
 
     def next_cam_func():
-        displays_selected_device_var.set(f"<video{int(displays_selected_device_var.get()[-2]) + 1}>")
+        displays_selected_device_var.set(
+            f"<video{int(displays_selected_device_var.get()[-2]) + 1}>")
         displays_page_update()
     previous_cam_button.pack(side=tk.LEFT, padx=5, pady=5)
     next_cam_button = tk.Button(
@@ -855,7 +905,8 @@ def main():
     def grab_all():
         # noinspection PyUnresolvedReferences
         cashed_dict_of_devices[displays_selected_device_var.get()]["displays"] = \
-                [*cashed_dict_of_devices[displays_selected_device_var.get()]["displays"].copy(),
+                [*cashed_dict_of_devices[
+                    displays_selected_device_var.get()]["displays"].copy(),
                  *get_free_displays(sbc.list_monitors(), cashed_dict_of_devices)]
         update_lists()
         check()
@@ -871,7 +922,8 @@ def main():
     def grab_selected():
         for i in list(left_list_box.curselection()):
             cashed_dict_of_devices[displays_selected_device_var.get()]["displays"] = \
-                    [*cashed_dict_of_devices[displays_selected_device_var.get()]["displays"].copy(),
+                    [*cashed_dict_of_devices[
+                        displays_selected_device_var.get()]["displays"].copy(),
                      left_list_box.get(i)]
         update_lists()
         check()
@@ -884,7 +936,8 @@ def main():
     grab_selected_btn.pack(anchor="center", padx=5)
 
     def store_selected():
-        copy_of_list = [*cashed_dict_of_devices[displays_selected_device_var.get()]["displays"].copy()]
+        copy_of_list = [*cashed_dict_of_devices[
+            displays_selected_device_var.get()]["displays"].copy()]
         for i in list(right_list_box.curselection()):
             copy_of_list.remove(right_list_box.get(i))
         cashed_dict_of_devices[displays_selected_device_var.get()]["displays"] = \
@@ -937,14 +990,52 @@ def main():
     displays_lists_frame.pack()
     displays_downside_frame.pack(fill=tk.BOTH, side=tk.BOTTOM, padx=5, pady=5)
     ...  # Добавляем
-    tab_control.add(displays_page, text="Настройки")
+    tab_control.add(displays_page, text="Дисплеи")
+
+    ...  # Страница калибровки
+    calibration_page = ttk.Frame(tab_control)
+    ...  # Прописываем элементы
+    ...  # Добавляем
+    tab_control.add(calibration_page, text="Калибровка", state="disabled")
 
     ...  # Страница дополнительных настроек
     settings_page = ttk.Frame(tab_control)
     ...  # Прописываем элементы
 
+    def down_upd():
+        if not downloader_busy:
+            v = 0
+            if edition == "venv":
+                v = branch
+
+            def d_a_end():
+                download_update_button.config(state="normal")
+                install_update_button.config(state="normal")
+            d_thread = threading.Thread(target=download_thread,
+                                        args=(sys_icon, edition, v, d_a_end))
+            d_thread.start()
+            download_update_button.config(state="disabled")
+            install_update_button.config(state="disabled")
+        else:
+            msb.showerror("Waba: обновление", "Уже загружается другое обновление")
+    download_update_button = tk.Button(
+        settings_page,
+        text="Скачать",
+        command=down_upd
+    )
+    download_update_button.pack()
+
+    def inst_upd():
+        install_update(sys_icon)
+    install_update_button = tk.Button(
+        settings_page,
+        text="Установить",
+        command=inst_upd,
+        state="disabled"
+    )
+    install_update_button.pack()
     ...  # Добавляем
-    tab_control.add(settings_page, text="Дополнительно", state="disabled")
+    tab_control.add(settings_page, text="Доп.", state="disabled")
 
     ...  # Страница About
     about_page = ttk.Frame(tab_control)
@@ -1005,7 +1096,7 @@ def main():
     about_lbl.pack()
     ...  # Пакуем шизоидов
     about_left_side_frame.pack(side=tk.LEFT, fill=tk.Y)
-    about_right_side_frame.pack(side=tk.LEFT, fill=tk.BOTH)
+    about_right_side_frame.pack(fill=tk.BOTH)
     web_buttons_frame.pack()
     ...  # Добавляем
     tab_control.add(about_page, text="О проекте")
@@ -1097,25 +1188,27 @@ def main():
         update()
         check()
 
-    def keep_state_in_mind():
+    def keep_state_in_mind(icon):
         if msb.askyesno("Waba: соотнесение значений",
                         "Уверены?\n"
                         "Соотнесение произойдёт для всех дисплеев сразу!"):
-            match_displays_brightness_at_state()
+            match_displays_brightness_at_state(icon)
 
-    def reset_keyvalues():
+    def reset_keyvalues(icon):
         if msb.askyesno("Waba: сброс значений",
                         "Уверены?\n"
-                        "Будут сброшены подстроечные значения\n"
+                        "Будет сброшена калибровка "
                         "всех дисплеев и камер!"):
-            clear_displays_keyframes()
+            clear_displays_keyframes(icon)
     ...
     if f_settings("tray", "main"):
         tray_menu = pystray.Menu(
             pystray.MenuItem("Открыть настройки", show_window, default=True),
             pystray.MenuItem("Обновить яркость", upd_bright, default=False),
-            pystray.MenuItem("Запомнить такую яркость", keep_state_in_mind, default=False),
-            pystray.MenuItem("Сбросить подстройку", reset_keyvalues, default=False),
+            pystray.MenuItem("Калибровка", pystray.Menu(
+                pystray.MenuItem("Запомнить такую яркость", keep_state_in_mind, default=False),
+                pystray.MenuItem("Сбросить калибровку", reset_keyvalues, default=False),
+            ), ),
             pystray.MenuItem("Обновлять раз в:", pystray.Menu(
                     pystray.MenuItem("Не обновлять", set_timer,
                                      lambda item: settings["cycle_timer"] is None, radio=True),
@@ -1134,14 +1227,15 @@ def main():
                     pystray.MenuItem("1 ч.", set_timer,
                                      lambda item: settings["cycle_timer"] == 3600, radio=True),
                 ),
-                             visible=f_settings("threading", "tray")
+                             enabled=f_settings("threading", "tray")
             ),
             pystray.MenuItem("Автозапуск", autostart_checkbox, lambda item: settings["autostart"],
-                             visible=f_settings("autostart", "tray")),
+                             enabled=f_settings("autostart", "tray")),
             pystray.MenuItem("GitHub", github_page),
             pystray.MenuItem("Закрыть", quit_all),
         )
-        sys_icon = pystray.Icon("WABA", PIL.Image.open("resources/settings_brightness.png"), title, tray_menu)
+        sys_icon = pystray.Icon("WABA", PIL.Image.open("resources/settings_brightness.png"),
+                                title, tray_menu)
         sys_icon.run_detached()
     else:
         sys_icon = None
@@ -1227,7 +1321,8 @@ if __name__ == "__main__":
                 debug_window.withdraw()
                 msb.showerror("Waba: Нет мониторов", "Нет данных о мониторах, прерываю запуск.\n"
                                                      "\n"
-                                                     "Проверьте кабели, обновите драйвера и попробуйте снова"
+                                                     "Проверьте кабели, обновите драйвера и "
+                                                     "попробуйте снова"
                               )
                 debug_window.destroy()
                 raise LookupError
@@ -1245,7 +1340,8 @@ if __name__ == "__main__":
                 debug_window.withdraw()
                 msb.showerror("Waba: нет камер", "Нет доступных камер / датчиков, прерываю запуск.\n"
                                                  "\n"
-                                                 "Проверьте подключена-ли хотя-бы одна камера и попробуйте снова")
+                                                 "Проверьте подключена-ли хотя-бы "
+                                                 "одна камера и попробуйте снова")
                 debug_window.destroy()
                 raise LookupError
             del displays

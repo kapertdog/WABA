@@ -18,8 +18,8 @@ import yaml
 import time
 
 title = "Waba (v.Dev_B)"
-version = "0.3.1.0"
-github_tag = "dev_b_pre-9"
+version = "0.3.1.1"
+github_tag = "dev_b_pre-10"
 edition = "venv"  # Всего 3 издания: "venv", "folder" и "exe"
 branch = "master"  # Пока планирую 2 ветки: "master" и "only-tray"
 
@@ -42,7 +42,7 @@ settings = {
     "settings_version": settings_version,
     "theme": "dark",
     "language": None,
-    "autostart": edition != "venv",
+    "autostart": False,
     "checking_for_updates": edition != "venv",
     # features
     "features": {
@@ -1296,8 +1296,9 @@ def check_for_updates(tag_or_sha, c_edition, user_files_path, save_old_files, do
             user_files_path=user_files_path, do_ask_user=do_ask_user):
         settings["_venv_dir"] = os.getcwd()
         save_settings()
+        access = os.access(Path(Path.cwd(), "requirements.txt"), os.W_OK & os.R_OK)
         os.chdir(waba_user_files_path)
-        if os.access(settings["_venv_dir"], os.W_OK & os.R_OK):
+        if access:
             os.system("installer.exe")
         else:
             os.system(f'''powershell -Command "Start-Process 'installer.exe' -Verb runAs"''')

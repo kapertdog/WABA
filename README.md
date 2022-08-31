@@ -1,5 +1,16 @@
 # WABA (Windows Automatic Brightness Adjustment)
+<!-- 
+[![forthebadge](https://forthebadge.com/images/badges/made-with-python.svg)](https://forthebadge.com)
+[![forthebadge](https://forthebadge.com/images/badges/open-source.svg)](https://forthebadge.com)
+[![forthebadge](https://forthebadge.com/images/badges/built-with-love.svg)](https://forthebadge.com)
+[![forthebadge](https://forthebadge.com/images/badges/gluten-free.svg)](https://forthebadge.com)
+[![forthebadge](https://forthebadge.com/images/badges/you-didnt-ask-for-this.svg)](https://forthebadge.com)
+-->
+
+[![made-with-python](https://img.shields.io/badge/made%20with-Python-1f425f.svg)](https://www.python.org/)
+[![platform](https://img.shields.io/badge/platform-win--64-blue)]()
 [![Crowdin](https://badges.crowdin.net/waba/localized.svg)](https://crowdin.com/project/waba)
+
 ### Linux? Gnome? Посмотрите форк [GABA](https://github.com/levkopo/GABA) 👀
 Странный, нужный только мне скрипт, подстраивающий яркость дисплея основываясь на данных с камеры
 

@@ -10,7 +10,10 @@
 [![made-with-python](https://img.shields.io/badge/made%20with-Python-1f425f.svg)](https://www.python.org/)
 [![platform](https://img.shields.io/badge/platform-win--64-blue)]()
 [![Crowdin](https://badges.crowdin.net/waba/localized.svg)](https://crowdin.com/project/waba)
-
+[![wakatime](
+https://wakatime.com/badge/user/c953efa8-fc06-4e4c-8158-fcc289fcf2e6/project/91d34353-79ef-47f5-b28d-d5e5c123c2ad.svg
+)](
+https://wakatime.com/badge/user/c953efa8-fc06-4e4c-8158-fcc289fcf2e6/project/91d34353-79ef-47f5-b28d-d5e5c123c2ad)
 ### Linux? Gnome? Посмотрите форк [GABA](https://github.com/levkopo/GABA) 👀
 Странный, нужный только мне скрипт, подстраивающий яркость дисплея основываясь на данных с камеры
 

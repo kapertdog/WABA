@@ -13,6 +13,7 @@ from tkinter import messagebox as msb
 from statistics import mean
 from pathlib import Path
 from autostart import autostart
+from languages import manager as lang
 import pystray
 import yaml
 import time
@@ -521,8 +522,7 @@ def github_page():
 
 
 def about(show: bool = True):
-    with open("about.txt", "r", encoding="UTF-8") as f:
-        about_txt = f.read()
+    about_txt = lang.get("about.txt")
     if show:
         msb.showinfo(
             "Waba: about",
@@ -1311,6 +1311,11 @@ def check_for_updates(tag_or_sha, c_edition, user_files_path, save_old_files, do
 if __name__ == "__main__":
     load_settings()
     load_version_file()
+    if not settings["language"]:
+        settings["language"] = lang.chose_lang()
+        save_settings()
+    lang.load(settings["language"])
+    sett_lang_sect = lang.Section("main.json", "starter", "errors")
     if settings["checking_for_updates"] and f_settings("autoupdate", "main"):
         check_for_updates(github_tag, edition, waba_user_files_path, True, True)
     try:
@@ -1320,11 +1325,10 @@ if __name__ == "__main__":
                 debug_window = tk.Tk()
                 debug_window.iconbitmap("logo2.ico")
                 debug_window.withdraw()
-                msb.showerror("Waba: Нет мониторов", "Нет данных о мониторах, прерываю запуск.\n"
-                                                     "\n"
-                                                     "Проверьте кабели, обновите драйвера и "
-                                                     "попробуйте снова"
-                              )
+                msb.showerror(
+                    sett_lang_sect.get("no_monitors_title"),
+                    sett_lang_sect.get("no_monitors")
+                )
                 debug_window.destroy()
                 raise LookupError
             settings["display"] = displays[0]
@@ -1339,10 +1343,10 @@ if __name__ == "__main__":
                 debug_window = tk.Tk()
                 debug_window.iconbitmap("logo2.ico")
                 debug_window.withdraw()
-                msb.showerror("Waba: нет камер", "Нет доступных камер / датчиков, прерываю запуск.\n"
-                                                 "\n"
-                                                 "Проверьте подключена-ли хотя-бы "
-                                                 "одна камера и попробуйте снова")
+                msb.showerror(
+                    sett_lang_sect.get("no_devices_title"),
+                    sett_lang_sect.get("no_devices")
+                )
                 debug_window.destroy()
                 raise LookupError
             del displays
@@ -1350,9 +1354,6 @@ if __name__ == "__main__":
             for cs in settings["devices"]:
                 # noinspection PyUnresolvedReferences
                 cashed_dict_of_devices[cs] = settings["devices"][cs].copy()
-
-            if not settings["language"]:
-                settings["language"] = "ru"
 
             main()
     except LookupError:

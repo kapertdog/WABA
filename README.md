@@ -8,12 +8,15 @@
 -->
 
 [![made-with-python](https://img.shields.io/badge/made%20with-Python-1f425f.svg)](https://www.python.org/)
+[![packed-with](https://img.shields.io/badge/packed%20with-auto--py--to--exe-blueviolet)](https://github.com/brentvollebregt/auto-py-to-exe)
 [![platform](https://img.shields.io/badge/platform-win--64-blue)]()
+
+<!--
+![GitHub release (latest by date including pre-releases)](https://img.shields.io/github/v/release/kapertdog/waba?include_prereleases)
+-->
 [![Crowdin](https://badges.crowdin.net/waba/localized.svg)](https://crowdin.com/project/waba)
-[![wakatime](
-https://wakatime.com/badge/user/c953efa8-fc06-4e4c-8158-fcc289fcf2e6/project/91d34353-79ef-47f5-b28d-d5e5c123c2ad.svg
-)](
-https://wakatime.com/badge/user/c953efa8-fc06-4e4c-8158-fcc289fcf2e6/project/91d34353-79ef-47f5-b28d-d5e5c123c2ad)
+[![wakatime](https://wakatime.com/badge/user/c953efa8-fc06-4e4c-8158-fcc289fcf2e6/project/91d34353-79ef-47f5-b28d-d5e5c123c2ad.svg)](https://wakatime.com/badge/user/c953efa8-fc06-4e4c-8158-fcc289fcf2e6/project/91d34353-79ef-47f5-b28d-d5e5c123c2ad)
+#### [🙏 Help me with the translation!](https://crowdin.com/project/waba)
 ### Linux? Gnome? Посмотрите форк [GABA](https://github.com/levkopo/GABA) 👀
 Странный, нужный только мне скрипт, подстраивающий яркость дисплея основываясь на данных с камеры
 
@@ -31,9 +34,9 @@ https://wakatime.com/badge/user/c953efa8-fc06-4e4c-8158-fcc289fcf2e6/project/91d
 
 ![image](https://user-images.githubusercontent.com/40202917/180593919-7e09355c-f7e9-464c-812b-bf744a910afa.png)
 
-И никак не связанной с основной частью возможностью скрыватся в трей
+И никак не связанной с основной частью возможностью скрываться в трей
 
 ![image](https://user-images.githubusercontent.com/40202917/180593411-bbc82836-60e3-4e38-a6c5-bab419ff94bf.png)
 
 
-###### ... Но сделаный с любовью 💕
+###### ... Но сделанный с любовью 💕

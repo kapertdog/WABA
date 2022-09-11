@@ -8,6 +8,7 @@ import shutil
 import tkinter as tk
 from tkinter import ttk
 from tkinter import filedialog as fd
+from tkinter import messagebox as msb
 import googletrans
 from pathlib import Path
 
@@ -19,7 +20,7 @@ from pathlib import Path
 """ Заглавные переменные """
 current_lang = {}
 default_lang = {}
-cashed_langs_path = Path(os.getenv("APPDATA", ""), "waba", "cashed", "languages")
+cashed_langs_path = Path(os.getenv("APPDATA", os.getcwd()), "waba", "cashed", "languages")
 """ Задание общей стилистики """
 example = {
     # Заголовок
@@ -88,36 +89,52 @@ def load(lang_name: str, printing: bool = True):
                 print(f"[{lang_name}]: {file_name} is loaded")
         elif printing:
             print(f"! [{lang_name}]: {file_name} is missing")
+    check_differences()
 
 
 def _check(head_dict, other_dict):
     diffs = 0
+    count = 0
     for key in head_dict:
-        if type(head_dict[key]) == dict:
-            diffs += _check(head_dict[key], other_dict[key])
-        elif key not in other_dict:
+        count += 1
+        if key not in other_dict:
             diffs += 1
-        elif head_dict[key] == other_dict[key]:
+        elif type(head_dict[key]) == dict and type(other_dict[key]) == dict:
+            d, c = _check(head_dict[key], other_dict[key])
+            diffs += d
+            count += c
+        elif head_dict[key] != other_dict[key]:
             diffs += 1
-    return diffs
+    return diffs, count
 
 
 def check_differences():
-    return _check(default_lang["main.json"]["data"],
-                  current_lang["main.json"]["data"])
+    diffs = 0
+    counts = 0
+    for file in current_lang:
+        d, c = _check(default_lang[file]["data"],
+                      current_lang[file]["data"])
+        diffs += d
+        counts += c
+    print(f"{diffs}/{counts} lines translated")
+    return diffs
 
 
 def info(loaded_file_name):
     return current_lang[loaded_file_name]["info"],
 
 
-def file_info(file_path: Path):
-    with file_path.open("r") as file:
-        _file = json.load(file)
+# def file_info(file_path: Path):
+#     with file_path.open("r") as file:
+#         _file = json.load(file)
 
 
 def get_langs_list():
-    return (*os.listdir(cashed_langs_path),
+    if cashed_langs_path.exists():
+        cashed_langs = os.listdir(cashed_langs_path)
+    else:
+        cashed_langs = ()
+    return (*cashed_langs,
             *os.listdir(Path("languages", "data")))
 
 
@@ -155,7 +172,7 @@ def _translate(data: dict, lang_from: str, lang_to: str):
 
 def make_translate(lang_to: str):
     def_path = Path("languages", "defaults")
-    out_path = Path(os.getenv("APPDATA", ""), "waba", "cashed", "languages", f"auto-{lang_to}")
+    out_path = Path(cashed_langs_path, f"auto-{lang_to}")
     if out_path.exists():
         shutil.rmtree(out_path)
     new_lang_pack = dict()
@@ -325,7 +342,7 @@ class LangSelectWindow(tk.Tk):
         self.bottom_frame = ttk.Frame(self)
 
         self.submit_btn = ttk.Button(
-            self.bottom_frame,
+            self.buttons_frame,
             text=lang_sect.get("submit"),
             command=self.submit
         )
@@ -334,11 +351,16 @@ class LangSelectWindow(tk.Tk):
         self.bottom_frame.pack(side=tk.BOTTOM, fill=tk.X)
 
     def generate(self):
+        g_lang_sect = Section("languages.json", "generate_lang")
         self.destroy()
         gn_window = GenerateLang()
         answ = gn_window.chose_lang()
         if answ:
-            make_translate(answ)
+            try:
+                make_translate(answ)
+            except Exception as err:
+                msb.showerror(g_lang_sect.get("error", "translation_failed_title"),
+                              f"{g_lang_sect.get('error', 'translation_failed')}\n\n{err}")
         r_main_window = LangSelectWindow()
         self.selected_lang.set(r_main_window.chose_lang())
 

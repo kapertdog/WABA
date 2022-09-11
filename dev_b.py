@@ -35,7 +35,7 @@ branch = "master"  # Пока планирую 2 ветки: "master" и "only-t
     Defaults
 """
 # Default settings values
-settings_version = 8
+settings_version = 8  # Надо не забыть обновить
 settings_path = Path(os.getenv("APPDATA", ""), "waba", "settings.yaml")
 waba_user_files_path = Path(os.getenv("APPDATA", ""), "waba")
 settings = {
@@ -73,6 +73,7 @@ settings = {
     # math
     "pre-save_values": False,  # Пока не работает
     "sort_keyframes": True,
+    "merge_nearest_keyframes": True,
     "keyframes_limit": 15
 }
 
@@ -125,7 +126,7 @@ def migrate_settings(data):
         for name in new:
             if name in old:
                 # Если элемент есть в старой версии
-                if type(new[name]) == dict:
+                if type(new[name]) == dict and name not in ("devices", "displays"):
                     # Но это словарь
                     ret[name] = check(old[name], new[name])
                 else:
@@ -522,7 +523,7 @@ def github_page():
 
 
 def about(show: bool = True):
-    about_txt = lang.get("about.txt")
+    about_txt = lang.get("main.json", "pages", "about", "about")
     if show:
         msb.showinfo(
             "Waba: about",
@@ -533,9 +534,10 @@ def about(show: bool = True):
 
 
 def main():
+    main_sect = lang.Section("main.json", "main")
     global settings
     main_window = tk.Tk()
-    main_window.title("Waba - настройки")
+    main_window.title(main_sect.get("title"))
     ...  # Подготовка переменных
 
     def submit(*_):

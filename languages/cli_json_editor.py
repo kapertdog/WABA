@@ -1,3 +1,4 @@
+import random
 import json
 import os
 from pathlib import Path
@@ -186,6 +187,7 @@ def choose(show: list | tuple | dict,
            wrong_answer_command=None,
            wrong_index_command=None,
            title: str = None,
+           subtitle: str = None,
            prompt: str = "> ",):
     """
     Ask user to select one item of list by index or key
@@ -200,6 +202,7 @@ def choose(show: list | tuple | dict,
     :param wrong_index_command: Will be executed if
     the user's provided index is not found in the provided list
     :param title: Text title of list
+    :param subtitle: Bottom text of list
     :param prompt: Input field prefix
     :return:
     """
@@ -219,6 +222,8 @@ def choose(show: list | tuple | dict,
             pd = ""
             fd = ""
         print(f"[{i}] {pd}{dir_list[i]}{fd}")
+    if subtitle:
+        print(subtitle)
     answer = input(prompt)
     # Если у нас число
     try:
@@ -275,6 +280,13 @@ file_data = {}
 
 def file_back():
     os.chdir(Path().absolute().parent)
+
+
+home = Path.cwd()
+
+
+def file_home():
+    os.chdir(home)
 
 
 def file_make_new(name=None):
@@ -351,7 +363,7 @@ def element_make_new_element(element=None):
         if not element:
             cls()
             element_show_info()
-            element = ask_str("Введите название для значения", do_cls=False)
+            element = ask_str("Введите название для элемента", do_cls=False)
             if not element:
                 break
         cls()
@@ -373,9 +385,9 @@ def element_make_new(name, text=None):
     print("  " + text.format(name))
     separator()
     answ = input("(element/section): ").lower()
-    if answ in ("element", "e", "элемент", "э", "value", "v"):
+    if answ in ("element", "e", "элемент", "э", "value", "v", "значение", "з"):
         element_make_new_element(name)
-    elif answ in ("section", "s", "раздел", "р", "значение", "з"):
+    elif answ in ("part", "p", "раздел", "р", "section", "s", "секция", "с"):
         element_make_new_section(name)
     elif answ in ("yes", "y", "sure", "да", "д", "1"):
         element_make_new(name, "Элемент или Раздел?")
@@ -411,10 +423,16 @@ def element_show_info():
     separator("/".join(selected))
 
 
+def get_tip():
+    if show_tips:
+        return file_tips[random.randint(0, len(file_tips) - 1)]
+
+
 file_top_choose_commands = {
     "|<--|": file_back
 }
 file_bottom_choose_commands = {
+    "|CWD|": file_home,
     "|del|": file_delete,
     "| + |": file_make_new
 }
@@ -426,6 +444,19 @@ element_bottom_choose_commands = {
     "|+value|": element_make_new_element,
     "|+section|": element_make_new_section
 }
+show_tips = True
+file_tips = [
+    # 'Подсказка: Что-бы воспользоваться особыми командами, используйте //COMMAND-PROMPT',
+    '#Подсказка: Не обязательно выбирать | + |, просто начните вводить название нового файла',
+    # '#Подсказка: Что-бы перейти к конкретному пути воспользуйтесь //GO-TO (путь до файла/папки)',
+    # '#Подсказка: Список доступных команд можно получить вызвав //HELP',
+    # '#Подсказка: Эти подсказки можно скрыть, просто введите //TIPS',
+    # '#Подсказка: Для доступа к функции eval() используйте //EVAL',
+    # '#Подсказка: Вернутся в домашнюю папку можно при помощи //HOME или //CWD',
+    # '#Подсказка: Выйти из программы можно сочетанием клавиш "CTRL + C", или введя //EXIT',
+    '#Интересное: Согласится можно по разному, например "ДА", "sure" и "1" тоже считаются за согласие',
+    '#Интересное: Изначально, эта строка должна была показывать результат предыдущего действия',
+]
 
 
 def cli_edit_v2():
@@ -437,7 +468,8 @@ def cli_edit_v2():
         if not path:
             answ = choose(sorted(os.listdir(), key=lambda fm: os.path.isfile(fm)),
                           file_top_choose_commands, file_bottom_choose_commands, file_make_new, nothing,
-                          "Выберите файл для редактирования или создайте новый")
+                          "Выберите файл для редактирования или создайте новый",
+                          file_tips[random.randint(0, len(file_tips) - 1)])
             if answ:
                 if os.path.isdir(answ):
                     os.chdir(answ)
@@ -475,5 +507,7 @@ def cli_edit_v2():
 
 
 if __name__ == "__main__":
-    if choose((), {"V.1": cli_edit, "V.2": cli_edit_v2}, {}, title="Выберите версию приложения") == "":
-        cli_edit()
+    if choose((), {"V.1": cli_edit,
+                   "V.2": cli_edit_v2},
+              {}, title="Выберите версию приложения") == "":
+        cli_edit_v2()

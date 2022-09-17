@@ -668,6 +668,7 @@ def main():
     bottom_frame = tk.Frame(main_window, padx=10, pady=10, background="#ABB2B9")
     ...  # Страница главных настроек
     main_page = ttk.Frame(tab_control)
+    main_page_sect = lang.Section("main.json", "pages", "main")
     ...  # Левый и правый фреймы
     left_side_frame = tk.Frame(main_page)
     right_side_frame = tk.Frame(main_page)

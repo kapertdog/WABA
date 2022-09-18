@@ -1274,7 +1274,7 @@ def main():
     main_window.resizable(width=False, height=False)
     ...  # Финальная подготовка и запуск основного цикла!!
     displays_page_update(do_check_cam=False)
-    main_window.iconbitmap("resources/logo2.ico")
+    main_window.iconbitmap(Path("resources", "logo2.ico"))
     main_window.after(0, check)
     main_window.mainloop()
     main_window.destroy()
@@ -1326,7 +1326,7 @@ if __name__ == "__main__":
             displays = sbc.list_monitors()
             if len(displays) == 0:
                 debug_window = tk.Tk()
-                debug_window.iconbitmap("logo2.ico")
+                debug_window.iconbitmap(Path("resources", "logo2.ico"))
                 debug_window.withdraw()
                 msb.showerror(
                     sett_lang_sect.get("no_monitors_title"),
@@ -1344,7 +1344,7 @@ if __name__ == "__main__":
                     }
             else:
                 debug_window = tk.Tk()
-                debug_window.iconbitmap("logo2.ico")
+                debug_window.iconbitmap(Path("resources", "logo2.ico"))
                 debug_window.withdraw()
                 msb.showerror(
                     sett_lang_sect.get("no_devices_title"),

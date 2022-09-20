@@ -26,7 +26,7 @@ github_master_download_url = \
 
 def setup(user_name, project_name):
     global github_repository_url, github_releases_url, github_commits_url, \
-        github_repository_download_url, github_master_download_url
+        github_repository_download_url, github_master_download_url, user, project
     github_repository_url = f"https://api.github.com/repos/{user_name}/{project_name}"
     github_releases_url = f"{github_repository_url}/releases"
     github_commits_url = f"{github_repository_url}/commits"
@@ -34,6 +34,8 @@ def setup(user_name, project_name):
         f"https://github.com/{user_name}/{project_name}/archive/refs/heads/"
     github_master_download_url = \
         f"https://github.com/{user_name}/{project_name}/archive/refs/heads/master.zip"
+    user = user_name
+    project = project_name
 
 
 setup(user, project)

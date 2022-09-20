@@ -44,7 +44,7 @@ branch = "master"  # Пока планирую 2 ветки: "master" и "only-t
 settings_version = 8  # Надо не забыть обновить
 settings_path = Path(os.getenv("APPDATA", ""), short_app_name.lower(), "settings.yaml")
 waba_user_files_path = Path(os.getenv("APPDATA", ""), short_app_name.lower())
-lang.cashed_langs_path = Path(waba_user_files_path, short_app_name.lower(), "cashed", "languages")
+lang.cashed_langs_path = Path(waba_user_files_path, "cashed", "languages")
 settings = {
     "_venv_dir": os.getcwd(),  # Нужно, но только для апдейтов
     "settings_version": settings_version,
@@ -418,7 +418,7 @@ def update_brightness(icon: pystray.Icon = None, *_):
     if settings["load_settings_every_update"]:
         load_settings()
     for device in settings["devices"]:
-        print(sect.get("device") + device)
+        print(sect.get("device"), device)
         disp = settings["devices"][device]["displays"]
         reply = dict()
         cam_b = get_brightness(device, settings["snapshot_delay"], settings["amount_of_shots"])
@@ -433,7 +433,6 @@ def update_brightness(icon: pystray.Icon = None, *_):
             if display not in displays_values:
                 generate_display_values(display)
                 print("  ~", sect.get("values_for_display_is_calculated"))
-                print("  ~ Просчитаны значения для этого дисплея")
                 # print(displays_values[display])
             old_b = sbc.get_brightness(display)[0]
             print(f"  *", sect.get("brightness_before"), old_b)
@@ -563,13 +562,13 @@ def github_page():
 
 
 def about(show: bool = True):
-    about_txt = lang.get("main.json", "pages", "about")
+    about_txt = lang.Section("main.json", "pages", "about")
     if show:
         msb.showinfo(
             titled_name + about_txt.get("title"),
             about_txt.get("about").format(full_app_name),
         )
-    return about_txt
+    return about_txt.get("about").format(full_app_name)
     # __import__("webbrowser").open_new_tab(r"https://github.com/kapertdog/WABA")
 
 
@@ -654,7 +653,8 @@ def main():
             next_cam_button.config(state="disabled")
             turned_cam_chbtn.config(state="disabled")
         turned_cam_chbtn_var.set(displays_selected_device_var.get() in cashed_dict_of_devices)
-        turned_cam_chbtn.config(text=f"Камера {displays_selected_device_var.get()}")
+        turned_cam_chbtn.config(text=f"{lang.get('main.json', 'pages', 'displays', 'current_sensor')}"
+                                     f" {displays_selected_device_var.get()}")
         update_lists()
         check()
 
@@ -1148,7 +1148,7 @@ def main():
     about_right_side_frame.pack(fill=tk.BOTH)
     web_buttons_frame.pack()
     ...  # Добавляем
-    tab_control.add(about_page, text=ap_sect("title"))
+    tab_control.add(about_page, text=ap_sect.get("title"))
 
     ...  # Теперь Нижний фрейм
 
@@ -1166,7 +1166,7 @@ def main():
     check_button = tk.Button(
         bottom_frame,
         command=upd_bright,
-        text=mp_sect.get("update"),
+        text=main_sect.get("update"),
         anchor="center",
         relief=tk.GROOVE,
     )
@@ -1175,7 +1175,7 @@ def main():
     submit_button = tk.Button(
         bottom_frame,
         command=submit,
-        text=mp_sect.get("apply"),
+        text=main_sect.get("apply"),
         state="disabled",
         relief=tk.GROOVE,
     )

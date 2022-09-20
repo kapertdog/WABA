@@ -171,12 +171,14 @@ def import_lang(directory: Path):
         raise TypeError("Wrong file or path")
 
 
-def _translate(data: dict, lang_from: str, lang_to: str):
-    translator = googletrans.Translator()
+def _translate(data: dict, lang_from: str, lang_to: str,
+               translator: googletrans.Translator = None):
+    if not translator:
+        translator = googletrans.Translator()
     result = dict()
     for key in data:
         if type(data[key]) == dict:
-            result[key] = _translate(data[key], lang_from, lang_to)
+            result[key] = _translate(data[key], lang_from, lang_to, translator)
         else:
             result[key] = translator.translate(data[key], lang_to, lang_from).text
     return result
@@ -198,11 +200,14 @@ def make_translate(lang_to: str):
     if not out_path.exists():
         os.makedirs(out_path)
 
+    translator = googletrans.Translator()
+
     for file in new_lang_pack:
         if file[-5:] == ".json":
             new_lang_pack[file]["info"]["%head%"] = "ru"
             new_lang_pack[file]["info"]["%name%"] = googletrans.LANGUAGES[lang_to]
-            new_lang_pack[file]["data"] = _translate(new_lang_pack[file]["data"], "ru", lang_to)
+            new_lang_pack[file]["data"] = \
+                _translate(new_lang_pack[file]["data"], "ru", lang_to, translator)
             with Path(out_path, file).open("w+", encoding="UTF-8") as w_file:
                 json.dump(new_lang_pack[file], w_file, sort_keys=True, indent=2)
         else:
@@ -211,8 +216,58 @@ def make_translate(lang_to: str):
                 w_file.write(new_lang_pack[file]["data"])
 
 
-def translate_only_missing():
-    ...
+def _translate_only_missing(def_data, data_to_extend, lang_to,
+                            translator: googletrans.Translator,):
+    reply = {}
+    for key in def_data:
+        if type(def_data[key]) == dict:
+            if key not in data_to_extend:
+                reply[key] = _translate(def_data[key], "ru", lang_to, translator)
+            elif def_data[key] == data_to_extend[key]:
+                reply[key] = _translate(def_data[key], "ru", lang_to, translator)
+            else:
+                reply[key] = _translate_only_missing(def_data[key], data_to_extend[key],
+                                                     lang_to, translator)
+        else:
+            if key not in data_to_extend:
+                reply[key] = translator.translate(def_data[key], "ru", lang_to)
+            elif def_data[key] == data_to_extend[key]:
+                reply[key] = translator.translate(def_data[key], "ru", lang_to)
+            else:
+                reply[key] = data_to_extend[key]
+    return reply
+
+
+def translate_only_missing(lang_to):
+    new_lang = {}
+    out_path = Path(cashed_langs_path, f"expanded-{lang_to}")
+
+    if out_path.exists():
+        shutil.rmtree(out_path)
+    os.makedirs(out_path)
+
+    translator = googletrans.Translator()
+    for file in default_lang:
+        if file[-5:] == ".json":
+            new_lang[file] = {}
+            new_lang[file]["info"] = {
+                "%name%": f"{googletrans.LANGUAGES[lang_to]}",
+                "%head%": current_lang[file]["info"]["%name%"]}
+            if file not in current_lang:
+                new_lang[file] = {}
+            new_lang[file]["data"] = \
+                _translate_only_missing(default_lang[file]["data"], current_lang[file],
+                                        lang_to, translator)
+            with Path(out_path, file).open("w+", encoding="UTF-8") as w_file:
+                json.dump(new_lang[file], w_file, sort_keys=True, indent=2)
+        elif file[-4:] == ".txt":
+            if file not in current_lang:
+                new_lang[file] = \
+                    translator.translate(default_lang[file], "ru", new_lang[file]["info"]["%name%"])
+            elif current_lang[file] == default_lang[file]:
+                new_lang[file] = \
+                    translator.translate(default_lang[file], "ru", new_lang[file]["info"]["%name%"])
+    return f"expanded-{lang_to}"
 
 
 """ Обработка запросов """
@@ -429,7 +484,7 @@ def chose_lang():
                     sect.get("title"),
                     sect.get("translate_missing_elements").format(lang, diff // (count / 100))):
                 case True:
-                    translate_only_missing()
+                    lang = translate_only_missing(lang)
                     break
                 case False:
                     break

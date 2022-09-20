@@ -23,7 +23,7 @@ short_app_name = "Waba"
 """ Заглавные переменные """
 current_lang = {}
 default_lang = {}
-cashed_langs_path = Path(os.getenv("APPDATA", os.getcwd()), "waba", "cashed", "languages")
+cashed_langs_path = Path(os.getenv("APPDATA", os.getcwd()), short_app_name.lower(), "cashed", "languages")
 """ Задание общей стилистики """
 example = {
     # Заголовок

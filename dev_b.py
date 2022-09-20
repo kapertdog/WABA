@@ -22,6 +22,7 @@ short_app_name = "Waba"  # Подставляется везде в интерф
 full_app_name = "Windows Automatic\nBrightness Adjustment"  # Вставляется в About
 
 titled_name = short_app_name + ": "
+lang.short_app_name = short_app_name
 
 title = short_app_name + " (v.Dev_B)"
 version = "0.3.2.0"
@@ -43,6 +44,7 @@ branch = "master"  # Пока планирую 2 ветки: "master" и "only-t
 settings_version = 8  # Надо не забыть обновить
 settings_path = Path(os.getenv("APPDATA", ""), short_app_name.lower(), "settings.yaml")
 waba_user_files_path = Path(os.getenv("APPDATA", ""), short_app_name.lower())
+lang.cashed_langs_path = Path(waba_user_files_path, short_app_name.lower(), "cashed", "languages")
 settings = {
     "_venv_dir": os.getcwd(),  # Нужно, но только для апдейтов
     "settings_version": settings_version,

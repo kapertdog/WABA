@@ -12,7 +12,7 @@ import yaml
 
 
 user = "kapertdog"
-project = "WABA"
+project = "Waba"
 
 
 github_repository_url = f"https://api.github.com/repos/{user}/{project}"
@@ -139,9 +139,13 @@ def _unzip_file(file_path, output_path: str = ""):
         file.extractall(output_path)
 
 
+# def check_for_updates(edition, tag_or_sha, branch=None,):
+#     ...
+
+
 def download_update(edition, version, releases: list = None):
-    cash_path = Path(os.getenv("APPDATA", ""), "waba", "cashed", "update")
-    data_path = Path(os.getenv("APPDATA", ""), "waba", "update")
+    cash_path = Path(os.getenv("APPDATA", ""), project.lower(), "cashed", "update")
+    data_path = Path(os.getenv("APPDATA", ""), project.lower(), "update")
     update_data_path = Path(data_path, "waba_update_data")
     additional_data_path = Path(data_path, "waba_additional_files")
     if cash_path.exists():
@@ -258,8 +262,8 @@ def check_for_updates_with_ui(tag_or_sha, user_files_path: str,
                             or (not do_ask_user):
                         return False
             except Exception as err:
-                msb.showerror("Waba: сбой", f"Не удалось проверить наличие обновлений\n\n"
-                                            f"{err}")
+                msb.showerror("Updater: сбой", f"Не удалось проверить наличие обновлений\n\n"
+                                               f"{err}")
                 return False
         case "venv":
             # noinspection PyBroadException
@@ -286,8 +290,8 @@ def check_for_updates_with_ui(tag_or_sha, user_files_path: str,
                                         f"Что нового:\n{commit_message}"):
                         return False
             except Exception as err:
-                msb.showerror("Waba: сбой", f"Не удалось проверить наличие обновления\n\n"
-                                            f"{err}")
+                msb.showerror("Updater: сбой", f"Не удалось проверить наличие обновления\n\n"
+                                               f"{err}")
                 return False
         case _:
             msb.showerror("Updater: В разработке", "Функция проверки обновлений\n"

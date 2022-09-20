@@ -18,8 +18,13 @@ import pystray
 import yaml
 import time
 
-title = "Waba (v.Dev_B)"
-version = "0.3.1.1"
+short_app_name = "Waba"  # Подставляется везде в интерфейсе
+full_app_name = "Windows Automatic\nBrightness Adjustment"  # Вставляется в About
+
+titled_name = short_app_name + ": "
+
+title = short_app_name + " (v.Dev_B)"
+version = "0.3.2.0"
 github_tag = "dev_b_pre-10"
 edition = "venv"  # Всего 3 издания: "venv", "folder" и "exe"
 branch = "master"  # Пока планирую 2 ветки: "master" и "only-tray"
@@ -36,8 +41,8 @@ branch = "master"  # Пока планирую 2 ветки: "master" и "only-t
 """
 # Default settings values
 settings_version = 8  # Надо не забыть обновить
-settings_path = Path(os.getenv("APPDATA", ""), "waba", "settings.yaml")
-waba_user_files_path = Path(os.getenv("APPDATA", ""), "waba")
+settings_path = Path(os.getenv("APPDATA", ""), short_app_name.lower(), "settings.yaml")
+waba_user_files_path = Path(os.getenv("APPDATA", ""), short_app_name.lower())
 settings = {
     "_venv_dir": os.getcwd(),  # Нужно, но только для апдейтов
     "settings_version": settings_version,
@@ -121,6 +126,8 @@ def f_settings(keyword: str, element: str = "main") -> str:
 
 
 def migrate_settings(data):
+    migrate_sect = lang.Section("main.json", "migrate")
+
     def check(old, new):
         ret = dict()
         for name in new:
@@ -133,22 +140,42 @@ def migrate_settings(data):
                     ret[name] = old[name]
             else:
                 # Если элемент вообще отсутствует
-                print("# Добавляю недостающий элемент", name)
+                print(f"# {migrate_sect.get('missing_element').format(name)}")
                 ret[name] = new[name]
         return ret
 
     global settings
-    print("-=- Происходит миграция -=-")
+    print(f"-=- {migrate_sect.get('migration_required')} -=-")
     data = check(data, settings)
 
     match data["settings_version"]:
         case 7:
-            msb.showwarning("Waba: миграция настроек", "Для корректной работы будут\n"
-                                                       "сброшены конфигурации камер и дисплеев.")
-            data["devices"] = {}
+            data = reset_settings(data, "displays_calibration", "sensors_calibration")
+            # msb.showwarning(migrate_sect.get("title"),
+            #                 migrate_sect.get("reset", "warn_top_text")
+            #                 + "\n\n"
+            #                 + migrate_sect.get("reset", "calibration"))
+            # data["devices"] = {}
 
     data["settings_version"] = settings_version
-    print("-=-  Успешная миграция  -=-")
+    print(f"-=-  {migrate_sect.get('successful')}  -=-")
+    return data
+
+
+def reset_settings(data, *args):
+    migrate_sect = lang.Section("main.json", "migrate")
+    warn_bottom_text_list = []
+    for i in args:
+        match i:
+            case "all":
+                data = settings
+            case "displays_calibration":
+                data["displays"] = {}
+            case "sensors_calibration":
+                data["devices"] = {}
+        warn_bottom_text_list.append(migrate_sect.get("reset", i))
+    msb.showwarning(titled_name + migrate_sect.get("title"),
+                    migrate_sect.get("reset", "warn_top_text") + "\n\n" + "\n".join(warn_bottom_text_list))
     return data
 
 
@@ -157,27 +184,31 @@ def save_settings(path: Path = settings_path):
         yaml.dump(settings, s, default_flow_style=False)
 
 
-def load_settings(path: Path = settings_path):
+def load_settings(path: Path = settings_path, do_migrate=True, do_update=True):
     # Path(os.getenv("APPDATA"), "Microsoft", "Window", "Start Menu", "Programs", "Startup")
     global settings
     if path.exists():
         with path.open("r+") as s:
             data = yaml.safe_load(s)
-        if data["settings_version"] != settings_version:
+        if data["settings_version"] != settings_version and do_migrate:
+            if data["language"]:
+                lang.load(data["language"], printing=False)
             try:
                 settings = migrate_settings(data)
             except Exception as err:
-                print("# Ошибка при миграции!!", err, "\n# Файл настроек будет перезаписан")
-                msb.showerror("Waba: ошибка миграции настроек", f"{err}\n"
-                                                                f"Настройки будут сброшены!")
+                migrate_sect = lang.Section("main.json", "migrate")
+                print("# " + migrate_sect.get("fatal_error"), err,
+                      "\n# " + migrate_sect.get("fatal_error_message"))
+                msb.showerror(titled_name + migrate_sect.get("title"), f"{err}\n" +
+                              migrate_sect.get("fatal_error_message"))
             save_settings(path)
         else:
             settings = data
-    else:
+    elif do_update:
         if not path.parent.exists():
             path.parent.mkdir()
         save_settings(path)
-    if not Path(settings["_venv_dir"]).exists():
+    if do_update and not Path(settings["_venv_dir"]).exists():
         settings["_venv_dir"] = str(Path.cwd())
         save_settings(path)
     return settings
@@ -282,42 +313,44 @@ def add_display_keyframe(display: str, keyframe: (int, int)):
     ...
 
 
-def clear_displays_keyframes(icon: pystray.Icon = None):
-    print("Сброс подстроечных значений")
+def reset_calibration(icon: pystray.Icon = None):
+    cbk_sect = lang.Section("main.json", "brightness_update", "clear_displays_keyframes")
+    print(cbk_sect.get("resetting_keyframes"))
     cashed_displays_dict = dict()
     for i in settings["displays"]:
         cashed_displays_dict[i] = settings["displays"][i]
     for display in cashed_displays_dict:
-        print(f'  "{display}", {len(cashed_displays_dict[display]["keyframes"])} эл. ...')
+        print(f'  "{display}", '
+              f'{cbk_sect.get("elements").format(len(cashed_displays_dict[display]["keyframes"]))} ...')
         settings["displays"].pop(display)
         generate_display_values(display)
-    print("Сохранение настроек...\n")
+    print(cbk_sect.get("saving_settings") + "\n")
     save_settings()
     if icon and settings["notifications"]:
         icon.notify(
-            "Восстановлены значения по умолчанию",
-            "Подстройка сброшена"
-        )
+            cbk_sect.get("default_values_restored"),
+            cbk_sect.get("reset"))
 
 
 def match_displays_brightness_at_state(icon: pystray.Icon = None):
+    mdb_sect = lang.Section("main.json", "brightness_update", "match_brightness")
     print(f"-=- {time.ctime()} -=-")
-    print("Соотнесение значений яркости")
+    print(mdb_sect.get("correlation_of_brightness_values"))
     for device in settings["devices"]:
-        print(f"Камера: {device}")
+        print(mdb_sect.get("device"), device)
         device_b = get_brightness(device, settings["snapshot_delay"], settings["amount_of_shots"])
         if device not in devices_values:
             generate_device_values(device)
         device_m_b = devices_values[device][device_b]
         print(f"{device_b}/255 ~ {device_m_b}/255")
         for display in settings["devices"][device]["displays"]:
-            print(f"  Дисплей: {display}")
+            print(f"  {mdb_sect.get('display')} {display}")
             display_b = sbc.get_brightness(display)[0]
-            print(f"    Текущая яркость: {display_b}")
+            print(f"    {mdb_sect.get('brightness_now')} {display_b}")
             add_display_keyframe(display, (device_m_b, display_b))
-            print(f"    ~ Значения заготовлены")
+            print(f"    ~ {mdb_sect.get('values_are_prepared')}")
     if icon and settings["notifications"]:
-        icon.notify("Авто-подстройка откалибрована с учётом новых данных", "Соотнесение завершено")
+        icon.notify(mdb_sect.get('calibrated'), mdb_sect.get('match_completed'))
     print()
 
 
@@ -346,9 +379,10 @@ def get_brightness(device: str = "<video0>", wait: int = 0, repeats: int = 1):
     try:
         return int(mean(brightness_list))
     except Exception as err:
-        msb.showerror("Waba: Ошибка настроек", f'Возможно, вы указали "0" в строке "amount_of_shots".\n'
-                                               f'Так нельзя.\n\n'
-                                               f'Ошибка Python: {err}')
+        sect = lang.Section("main.json", "brightness_update", "errors")
+        msb.showerror(
+            titled_name + sect.get("incorrect_settings_title"),
+            sect.get("incorrect_settings").format(err))
         raise ValueError(err)
 
 
@@ -377,35 +411,37 @@ def calc_value_v2(value: int, *args: int):
 
 
 def update_brightness(icon: pystray.Icon = None, *_):
+    sect = lang.Section("main.json", "brightness_update", "update_brightness")
     print(f"-=- {time.ctime()} -=-")
     if settings["load_settings_every_update"]:
         load_settings()
     for device in settings["devices"]:
-        print(f"Камера: {device}")
+        print(sect.get("device") + device)
         disp = settings["devices"][device]["displays"]
         reply = dict()
         cam_b = get_brightness(device, settings["snapshot_delay"], settings["amount_of_shots"])
         if device not in devices_values:
             generate_device_values(device)
-            print("~ Просчитаны значения для этой камеры")
+            print("~", sect.get("values_for_sensor_is_calculated"))
             # print(devices_values[device])
         m_cam_b = devices_values[device][cam_b]
-        print(f"Яркость с камеры: {cam_b}/255 -> {m_cam_b}")
+        print(sect.get("brightness_from_sensor"), f"{cam_b}/255 -> {m_cam_b}")
         for display in disp:
-            print(f"* Дисплей: {display}")
+            print("*", sect.get("display"))
             if display not in displays_values:
                 generate_display_values(display)
+                print("  ~", sect.get("values_for_display_is_calculated"))
                 print("  ~ Просчитаны значения для этого дисплея")
                 # print(displays_values[display])
             old_b = sbc.get_brightness(display)[0]
-            print(f"  * Яркость до изменения: {old_b}")
+            print(f"  *", sect.get("brightness_before"), old_b)
             m_b = displays_values[display][m_cam_b]
             # method = settings["devices"][device]["method"]
             # if method and method != "":
             #     m_b = calc_custom(cam_b, method)
             # else:
             #     m_b = calc_value_v1(cam_b)
-            print(f"  * После: {m_b}")
+            print(f"  *", sect.get("brightness_after"), m_b)
             print()
             sbc.set_brightness(m_b, display)
             reply[display] = {
@@ -422,7 +458,7 @@ def update_brightness(icon: pystray.Icon = None, *_):
         if icon is not None and settings["notifications"]:
             icon.notify(
                 reply_text,
-                f"Яркость обновлена",
+                sect.get("brightness_updated"),
             )
     # return d, old_b, cam_b, m_b
 
@@ -438,7 +474,8 @@ def timer_thread(_):
                 try:
                     update_brightness()
                 except Exception as err:
-                    msb.showerror("Waba: Сбой", f"{err}")
+                    msb.showerror(titled_name + lang.get("main.json", "default_error", "title"),
+                                  f"{err}")
                 last_time = int(time.monotonic())
         time.sleep(settings["timer_tick_delay"])
 
@@ -447,23 +484,24 @@ downloader_busy = False
 
 
 def download_thread(icon: pystray.Icon, e, v, do_at_end=None):
+    sect = lang.Section("main.json", "download_thread")
     import updater.manager
     global downloader_busy
     downloader_busy = True
     if icon and settings["notifications"]:
-        icon.notify("Можете продолжать пользоваться приложением",
-                    "Загружается обновление...")
+        icon.notify(sect.get("you_can_use_app"),
+                    sect.get("update_is_downloading"))
 
     try:
         updater.manager.download_update(e, v)
     except Exception as err:
-        msb.showerror("Waba: ошибка загрузки обновления", f"{err}")
+        msb.showerror(titled_name + sect.get("error_title"), f"{err}")
         downloader_busy = False
         return False
 
     if icon and settings["notifications"]:
-        icon.notify("Загляните в Доп. настройки что-бы установить",
-                    "Обновление загрузилось!")
+        icon.notify(sect.get("go_to_extra"),
+                    sect.get("downloaded"))
     if do_at_end:
         do_at_end()
     downloader_busy = False
@@ -523,11 +561,11 @@ def github_page():
 
 
 def about(show: bool = True):
-    about_txt = lang.get("main.json", "pages", "about", "about")
+    about_txt = lang.get("main.json", "pages", "about")
     if show:
         msb.showinfo(
-            "Waba: about",
-            about_txt
+            titled_name + about_txt.get("title"),
+            about_txt.get("about").format(full_app_name),
         )
     return about_txt
     # __import__("webbrowser").open_new_tab(r"https://github.com/kapertdog/WABA")
@@ -537,7 +575,7 @@ def main():
     main_sect = lang.Section("main.json", "main")
     global settings
     main_window = tk.Tk()
-    main_window.title(main_sect.get("title"))
+    main_window.title(titled_name + main_sect.get("title"))
     ...  # Подготовка переменных
 
     def submit(*_):
@@ -640,7 +678,8 @@ def main():
             changes += int(spinbox_shot_delay_var.get() != settings["snapshot_delay"])
             changes += int(not settings["devices"] == cashed_dict_of_devices)
         except Exception as err:
-            msb.showerror("Waba: сбой при проверке настроек", f"{err}")
+            msb.showerror(titled_name + main_sect.get("settings_checking_error"),
+                          f"{err}")
         if changes == 0:
             submit_button.config(state="disabled")
             main_window.update()
@@ -668,7 +707,7 @@ def main():
     bottom_frame = tk.Frame(main_window, padx=10, pady=10, background="#ABB2B9")
     ...  # Страница главных настроек
     main_page = ttk.Frame(tab_control)
-    main_page_sect = lang.Section("main.json", "pages", "main")
+    mp_sect = lang.Section("main.json", "pages", "main")
     ...  # Левый и правый фреймы
     left_side_frame = tk.Frame(main_page)
     right_side_frame = tk.Frame(main_page)
@@ -684,7 +723,7 @@ def main():
 
     hiding_to_tray_chbtn = tk.Checkbutton(
         left_side_frame,
-        text="Сворачивать в трей",
+        text=mp_sect.get("hiding_to_tray"),
         padx=10,
         anchor="w",
         command=check,
@@ -695,7 +734,7 @@ def main():
 
     hiding_when_start_chbtn = tk.Checkbutton(
         left_side_frame,
-        text="Запускать свёрнутым",
+        text=mp_sect.get("hiding_when_start"),
         padx=10,
         anchor="w",
         command=check,
@@ -706,7 +745,7 @@ def main():
 
     notifications_chbtn = tk.Checkbutton(
         left_side_frame,
-        text="Уведомления",
+        text=mp_sect.get("notifications"),
         padx=10,
         anchor="w",
         command=check,
@@ -717,7 +756,7 @@ def main():
 
     autostart_chbtn = tk.Checkbutton(
         left_side_frame,
-        text="Автозапуск",
+        text=mp_sect.get("starting_with_system"),
         padx=10,
         anchor="w",
         command=check,
@@ -728,7 +767,7 @@ def main():
 
     checking_for_updates_chbtn = tk.Checkbutton(
         left_side_frame,
-        text="Искать обновления",
+        text=mp_sect.get("look_for_updates"),
         padx=10,
         anchor="w",
         command=check,
@@ -739,7 +778,7 @@ def main():
     ...
     lbl_update_rate_lst = tk.Label(
         right_side_frame,
-        text="Обновлять каждые:",
+        text=mp_sect.get("brightness_update_rate"),
         padx=10,
         anchor="w",
         state=f_settings("threading", "tkinter")
@@ -795,10 +834,11 @@ def main():
     left_side_frame.pack(side=tk.LEFT, fill=tk.BOTH)
     right_side_frame.pack(side=tk.LEFT, fill=tk.BOTH)
     ...  # Добавляем страничку
-    tab_control.add(main_page, text="Главная")
+    tab_control.add(main_page, text=mp_sect.get("title"))
 
     ...  # Страница соотношения камер и мониторов
     displays_page = ttk.Frame(tab_control)
+    dp_sect = lang.Section("main.json", "pages", "displays")
     ...  # И вновь прописываю стороны
     displays_top_line_frame = tk.Frame(displays_page, bg="#D8D8D8")
     displays_lists_frame = tk.Frame(displays_page)
@@ -855,7 +895,7 @@ def main():
         check()
     turned_cam_chbtn = tk.Checkbutton(
         displays_top_line_frame,
-        text="Камера <video0>",
+        text=f"{dp_sect.get('current_sensor')} <video0>",
         command=turned_cam_func,
         variable=turned_cam_chbtn_var,
     )
@@ -863,7 +903,7 @@ def main():
     ...
     left_list_box_title = tk.Label(
         displays_lists_left_frame,
-        text="Свободны:"
+        text=dp_sect.get("free")
     )
     left_list_box_title.pack(fill=tk.X, anchor="center")
     left_list_box_scrllbar = ttk.Scrollbar(
@@ -885,7 +925,7 @@ def main():
     ...
     right_list_box_title = tk.Label(
         displays_lists_right_frame,
-        text="Выбраны:"
+        text=dp_sect.get("selected")
     )
     right_list_box_title.pack()
     right_list_box_scrllbar = ttk.Scrollbar(
@@ -973,7 +1013,7 @@ def main():
 
     method_entry_lbl = tk.Label(
         displays_downside_frame,
-        text="Функция:",
+        text=dp_sect.get("function"),
         state="disabled",
     )
     method_entry_lbl.pack(side=tk.LEFT)
@@ -984,7 +1024,7 @@ def main():
     method_entry.pack(fill=tk.X, side=tk.LEFT)
     get_photo_btn = tk.Button(
         displays_downside_frame,
-        text="Сделать фото",
+        text=dp_sect.get("take_a_photo"),
         state="disabled",
     )
     get_photo_btn.pack(side=tk.RIGHT)
@@ -993,16 +1033,18 @@ def main():
     displays_lists_frame.pack()
     displays_downside_frame.pack(fill=tk.BOTH, side=tk.BOTTOM, padx=5, pady=5)
     ...  # Добавляем
-    tab_control.add(displays_page, text="Дисплеи")
+    tab_control.add(displays_page, text=dp_sect.get("title"))
 
     ...  # Страница калибровки
     calibration_page = ttk.Frame(tab_control)
+    cp_sect = lang.Section("main.json", "pages", "calibration")
     ...  # Прописываем элементы
     ...  # Добавляем
-    tab_control.add(calibration_page, text="Калибровка", state="disabled")
+    tab_control.add(calibration_page, text=cp_sect.get("title"), state="disabled")
 
     ...  # Страница дополнительных настроек
     settings_page = ttk.Frame(tab_control)
+    sp_sect = lang.Section("main.json", "pages", "extra")
     ...  # Прописываем элементы
 
     def down_upd():
@@ -1020,7 +1062,8 @@ def main():
             download_update_button.config(state="disabled")
             install_update_button.config(state="disabled")
         else:
-            msb.showerror("Waba: обновление", "Уже загружается другое обновление")
+            msb.showerror(titled_name + lang.get("main.json", "download_thread", "title"),
+                          lang.get("main.json", "download_thread", "already_downloading"))
     download_update_button = tk.Button(
         settings_page,
         text="Скачать",
@@ -1038,10 +1081,11 @@ def main():
     )
     install_update_button.pack()
     ...  # Добавляем
-    tab_control.add(settings_page, text="Доп.", state="disabled")
+    tab_control.add(settings_page, text=sp_sect.get("title"), state="disabled")
 
     ...  # Страница About
     about_page = ttk.Frame(tab_control)
+    ap_sect = lang.Section("main.json", "pages", "about")
     ...  # Вновь делю на левую и правую части
     about_left_side_frame = tk.Frame(about_page)
     about_right_side_frame = tk.Frame(about_page)
@@ -1055,7 +1099,7 @@ def main():
 
     sub_waba_lbl = tk.Label(
         about_left_side_frame,
-        text="Репозиторий и автор"
+        text=ap_sect.get("links")
     )
     sub_waba_lbl.pack()
 
@@ -1102,7 +1146,7 @@ def main():
     about_right_side_frame.pack(fill=tk.BOTH)
     web_buttons_frame.pack()
     ...  # Добавляем
-    tab_control.add(about_page, text="О проекте")
+    tab_control.add(about_page, text=ap_sect("title"))
 
     ...  # Теперь Нижний фрейм
 
@@ -1113,13 +1157,14 @@ def main():
         try:
             update_brightness(icon)
         except Exception as err:
-            msb.showerror("Waba: сбой", f"{err}")
+            msb.showerror(titled_name +
+                          lang.get("main.json", "default_error", "title"), f"{err}")
             return
 
     check_button = tk.Button(
         bottom_frame,
         command=upd_bright,
-        text="Обновить яркость",
+        text=mp_sect.get("update"),
         anchor="center",
         relief=tk.GROOVE,
     )
@@ -1128,7 +1173,7 @@ def main():
     submit_button = tk.Button(
         bottom_frame,
         command=submit,
-        text="Применить",
+        text=mp_sect.get("apply"),
         state="disabled",
         relief=tk.GROOVE,
     )
@@ -1191,28 +1236,28 @@ def main():
         update()
         check()
 
+    tray_sect = lang.Section("main.json", "tray")
+
     def keep_state_in_mind(icon):
-        if msb.askyesno("Waba: соотнесение значений",
-                        "Уверены?\n"
-                        "Соотнесение произойдёт для всех дисплеев сразу!"):
+        if msb.askyesno(titled_name + tray_sect.get("ask_do_calibration_title"),
+                        tray_sect.get("ask_do_calibration")):
             match_displays_brightness_at_state(icon)
 
     def reset_keyvalues(icon):
-        if msb.askyesno("Waba: сброс значений",
-                        "Уверены?\n"
-                        "Будет сброшена калибровка "
-                        "всех дисплеев и камер!"):
-            clear_displays_keyframes(icon)
+        if msb.askyesno(titled_name + tray_sect.get("ask_reset_calibration_title"),
+                        tray_sect.get("ask_reset_calibration")):
+            reset_calibration(icon)
     ...
     if f_settings("tray", "main"):
         tray_menu = pystray.Menu(
-            pystray.MenuItem("Открыть настройки", show_window, default=True),
-            pystray.MenuItem("Обновить яркость", upd_bright, default=False),
-            pystray.MenuItem("Калибровка", pystray.Menu(
-                pystray.MenuItem("Запомнить такую яркость", keep_state_in_mind, default=False),
-                pystray.MenuItem("Сбросить калибровку", reset_keyvalues, default=False),
+            pystray.MenuItem(tray_sect.get("open_settings"), show_window, default=True),
+            pystray.MenuItem(tray_sect.get("update_brightness"), upd_bright, default=False),
+            pystray.MenuItem(tray_sect.get("calibration", "name"), pystray.Menu(
+                pystray.MenuItem(tray_sect.get("calibration", "keep_in_mind"),
+                                 keep_state_in_mind, default=False),
+                pystray.MenuItem(tray_sect.get("calibration", "reset"), reset_keyvalues, default=False),
             ), ),
-            pystray.MenuItem("Обновлять раз в:", pystray.Menu(
+            pystray.MenuItem(tray_sect.get("update_every"), pystray.Menu(
                     pystray.MenuItem("Не обновлять", set_timer,
                                      lambda item: settings["cycle_timer"] is None, radio=True),
                     pystray.MenuItem("30 с.", set_timer,
@@ -1232,12 +1277,12 @@ def main():
                 ),
                              enabled=f_settings("threading", "tray")
             ),
-            pystray.MenuItem("Автозапуск", autostart_checkbox, lambda item: settings["autostart"],
+            pystray.MenuItem(tray_sect.get("autostart"), autostart_checkbox, lambda item: settings["autostart"],
                              enabled=f_settings("autostart", "tray")),
             pystray.MenuItem("GitHub", github_page),
-            pystray.MenuItem("Закрыть", quit_all),
+            pystray.MenuItem(tray_sect.get("exit"), quit_all),
         )
-        sys_icon = pystray.Icon("WABA", PIL.Image.open("resources/settings_brightness.png"),
+        sys_icon = pystray.Icon("Waba", PIL.Image.open("resources/settings_brightness.png"),
                                 title, tray_menu)
         sys_icon.run_detached()
     else:
@@ -1254,14 +1299,14 @@ def main():
             main_window.withdraw()
             if settings["im_hiding_message"] and settings["notifications"]:
                 sys_icon.notify(
-                    "Это можно выключить в настройках",
-                    "Waba скрылась в трее"
+                    tray_sect.get("hid_in_tray"),
+                    tray_sect.get("hid_in_tray_title")
                 )
                 settings["im_hiding_message"] = False
                 save_settings()
         else:
-            if msb.askyesno("Waba: закрыть приложение",
-                            "Действительно хотите закрыть приложение?"):
+            if msb.askyesno(titled_name + tray_sect.get("ask_to_exit_title"),
+                            tray_sect.get("ask_to_exit")):
                 quit_all(sys_icon, window=main_window)
     ...
     main_window.protocol('WM_DELETE_WINDOW', hide_window)
@@ -1312,6 +1357,7 @@ def check_for_updates(tag_or_sha, c_edition, user_files_path, save_old_files, do
 
 
 if __name__ == "__main__":
+    lang.load_default()
     load_settings()
     load_version_file()
     if not settings["language"]:
@@ -1329,7 +1375,7 @@ if __name__ == "__main__":
                 debug_window.iconbitmap(Path("resources", "logo2.ico"))
                 debug_window.withdraw()
                 msb.showerror(
-                    sett_lang_sect.get("no_monitors_title"),
+                    titled_name + sett_lang_sect.get("no_monitors_title"),
                     sett_lang_sect.get("no_monitors")
                 )
                 debug_window.destroy()
@@ -1347,7 +1393,7 @@ if __name__ == "__main__":
                 debug_window.iconbitmap(Path("resources", "logo2.ico"))
                 debug_window.withdraw()
                 msb.showerror(
-                    sett_lang_sect.get("no_devices_title"),
+                    titled_name + sett_lang_sect.get("no_devices_title"),
                     sett_lang_sect.get("no_devices")
                 )
                 debug_window.destroy()

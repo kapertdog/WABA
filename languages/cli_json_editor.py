@@ -255,12 +255,14 @@ def show_message(message, title=None):
     input("OK > ")
 
 
-def ask_str(message, title=None, do_cls=True):
+def ask_str(message, title=None, bottom_title=None, do_cls=True):
     if do_cls:
         cls()
         separator(title)
     print("  " + message)
     separator()
+    if bottom_title:
+        print(bottom_title)
     return input("... ")
 
 
@@ -358,7 +360,7 @@ def element_make_new_section(section=None):
         selected.append(section)
 
 
-def element_make_new_element(element=None):
+def element_make_new_element(element=None, old_value=None):
     for i in range(1):
         if not element:
             cls()
@@ -368,7 +370,10 @@ def element_make_new_element(element=None):
                 break
         cls()
         element_show_info()
-        new_element_data = ask_str(f'Введите новое значение для "{element}"', do_cls=False)
+        new_element_data = ask_str(f'Введите новое значение для "{element}"',
+                                   None,
+                                   f"Старое значение: {old_value}" if old_value else False,
+                                   do_cls=False)
         if new_element_data:
             decompose(file_data["data"], *selected)[element] = \
                 "\n".join(new_element_data.split(r"\n"))
@@ -493,10 +498,12 @@ def cli_edit_v2():
                 elif type(element) == str:
                     cls()
                     element_show_info()
-                    new_element_data = ask_str(f'Введите новое значение для {answ}', do_cls=False)
-                    if new_element_data:
-                        decompose(file_data["data"], *selected)[answ] = \
-                            "\n".join(new_element_data.split(r"\n"))
+                    element_make_new_element(
+                        answ, decompose(file_data["data"], *selected)[answ])
+                    # new_element_data = ask_str(f'Введите новое значение для {answ}', do_cls=False)
+                    # if new_element_data:
+                    #     decompose(file_data["data"], *selected)[answ] = \
+                    #         "\n".join(new_element_data.split(r"\n"))
             if path:
                 if Path(path).exists():
                     with open(path, "w+", encoding="UTF-8") as w_file:

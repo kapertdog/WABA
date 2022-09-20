@@ -14,8 +14,11 @@ from pathlib import Path
 
 # TODO:
 #  Поддержка смены языка в реальном времени,
-#  Проверка целостности перевода,
 #  Импорт переводов из файла,
+
+
+short_app_name = "Waba"
+
 
 """ Заглавные переменные """
 current_lang = {}
@@ -32,7 +35,7 @@ example = {
     "data": {
         # Разделы
         "main-section": {
-            # Может иметь значения # Пока невозможно
+            # Может иметь значения
             "element": "value",
             # Под-разделы
             "sub-section": {
@@ -64,6 +67,13 @@ def _load(file_path: Path):
             return file.read()
 
 
+def load_default(printing: bool = True):
+    for file_name in os.listdir(Path("languages", "defaults")):
+        default_lang[file_name] = _load(Path("languages", "defaults", file_name))
+    if printing:
+        print(f" default lang loaded")
+
+
 def load(lang_name: str, printing: bool = True):
     if printing:
         print(f"- Loading {lang_name} lang -")
@@ -71,10 +81,7 @@ def load(lang_name: str, printing: bool = True):
     lang_path = Path(cashed_langs_path, lang_name)
 
     if default_lang == {}:
-        for file_name in os.listdir(Path("languages", "defaults")):
-            default_lang[file_name] = _load(Path("languages", "defaults", file_name))
-        if printing:
-            print(f" default lang loaded")
+        load_default(printing)
     current_lang.clear()
 
     if lang_path.exists():
@@ -86,38 +93,42 @@ def load(lang_name: str, printing: bool = True):
         if Path(path, file_name).exists():
             current_lang[file_name] = _load(Path(path, file_name))
             if printing:
-                print(f"[{lang_name}]: {file_name} is loaded")
+                print(f"[{lang_name}]: {file_name} loaded")
         elif printing:
-            print(f"! [{lang_name}]: {file_name} is missing")
-    check_differences()
+            print(f"! [{lang_name}]: {file_name} missing")
+    if printing:
+        check_differences()
 
 
 def _check(head_dict, other_dict):
     diffs = 0
     count = 0
+    missing = 0
     for key in head_dict:
         count += 1
         if key not in other_dict:
-            diffs += 1
+            missing += 1
         elif type(head_dict[key]) == dict and type(other_dict[key]) == dict:
-            d, c = _check(head_dict[key], other_dict[key])
+            d, c, m = _check(head_dict[key], other_dict[key])
             diffs += d
-            count += c
+            count += c - 1
+            missing += m
         elif head_dict[key] != other_dict[key]:
             diffs += 1
-    return diffs, count
+    return diffs, count, missing
 
 
-def check_differences():
+def check_differences(printing=True):
     diffs = 0
     counts = 0
     for file in current_lang:
-        d, c = _check(default_lang[file]["data"],
-                      current_lang[file]["data"])
+        d, c, m = _check(default_lang[file]["data"],
+                         current_lang[file]["data"])
         diffs += d
         counts += c
-    print(f"{diffs}/{counts} lines translated")
-    return diffs
+    if printing:
+        print(f"{diffs}/{counts} lines translated")
+    return diffs, counts
 
 
 def info(loaded_file_name):
@@ -144,6 +155,7 @@ def import_lang(directory: Path):
     :param directory: ".zip" (like '>en.zip</en/data' inside)
     or lang_forder (with data inside!! not folder in folder)
     """
+    directory = Path(directory)
     if not cashed_langs_path.exists():
         os.makedirs(cashed_langs_path)
     if directory.is_dir():
@@ -199,6 +211,10 @@ def make_translate(lang_to: str):
                 w_file.write(new_lang_pack[file]["data"])
 
 
+def translate_only_missing():
+    ...
+
+
 """ Обработка запросов """
 
 
@@ -229,7 +245,23 @@ def get(file, *args):
 
 class Section:
     def __init__(self, *path):
-        self.path = path
+        self.path = []
+        for item in path:
+            match item:
+                case Section():
+                    self.path.append(item.path)
+                case str():
+                    self.path.append(item)
+                case list() | tuple():
+                    self.path.extend(item)
+                case _:
+                    self.path.append(item.__str__)
+
+    def __call__(self, *args, **kwargs):
+        return get(*self.path)
+
+    def __iter__(self):
+        return self.path.__iter__()
 
     def get(self, *path):
         return get(*self.path, *path)
@@ -246,7 +278,7 @@ class GenerateLang(tk.Tk):
         if not loaded():
             load("en", False)
 
-        self.title(lang_sect.get("title"))
+        self.title(short_app_name + ": " + lang_sect.get("title"))
 
         self.select_frame = ttk.Frame(self)
 
@@ -300,7 +332,7 @@ class LangSelectWindow(tk.Tk):
         if not loaded():
             load("en", False)
 
-        self.title(lang_sect.get("title"))
+        self.title(short_app_name + ": " + lang_sect.get("title"))
 
         self.select_frame = ttk.Frame(self)
 
@@ -317,7 +349,7 @@ class LangSelectWindow(tk.Tk):
         )
         self.update_langs_list()
         self.langs_list.pack(fill=tk.X, padx=5, pady=5)
-        self.langs_list.set("ru")
+        self.langs_list.set("en")
 
         self.select_frame.pack(fill=tk.X)
 
@@ -387,7 +419,25 @@ class LangSelectWindow(tk.Tk):
 
 
 def chose_lang():
-    return LangSelectWindow().chose_lang()
+    while True:
+        sect = Section("languages.json", "chose_lang")
+        lang = LangSelectWindow().chose_lang()
+        load(lang, False)
+        diff, count = check_differences(False)
+        if count - diff > count // 2 and lang in googletrans.LANGUAGES:
+            match msb.askyesnocancel(
+                    sect.get("title"),
+                    sect.get("translate_missing_elements").format(lang, diff // (count / 100))):
+                case True:
+                    translate_only_missing()
+                    break
+                case False:
+                    break
+                case None:
+                    ...
+        else:
+            break
+    return lang
 
 
 """ Точка входа """

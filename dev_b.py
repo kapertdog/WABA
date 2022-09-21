@@ -3,8 +3,10 @@
     WABA (Windows automatic brightness adjustment) v.DEV_B
 """
 import os
+import sys
 import threading
 import PIL.Image
+import keyboard
 import screen_brightness_control as sbc
 import imageio as iio
 import tkinter as tk
@@ -14,6 +16,7 @@ from statistics import mean
 from pathlib import Path
 from autostart import autostart
 from languages import manager as lang
+import psutil
 import pystray
 import yaml
 import time
@@ -41,7 +44,7 @@ branch = "master"  # Пока планирую 2 ветки: "master" и "only-t
     Defaults
 """
 # Default settings values
-settings_version = 8  # Надо не забыть обновить
+settings_version = 9
 settings_path = Path(os.getenv("APPDATA", ""), short_app_name.lower(), "settings.yaml")
 waba_user_files_path = Path(os.getenv("APPDATA", ""), short_app_name.lower())
 lang.cashed_langs_path = Path(waba_user_files_path, "cashed", "languages")
@@ -57,6 +60,8 @@ settings = {
         # Обновляются только после перезапуска!!
         "autoupdate": True,
         "autostart": True,
+        "google_translate": True,
+        "lock_file": True,
         "custom_icons": True,  # Пока ничего не делает
         "safe_math_mode": True,
         "threading": True,
@@ -80,8 +85,10 @@ settings = {
     # math
     "pre-save_values": False,  # Пока не работает
     "sort_keyframes": True,
-    "merge_nearest_keyframes": True,
-    "keyframes_limit": 15
+    "merge_nearest_keyframes": True,  # Тоже пока не работает
+    "keyframes_limit": 15,  # Тоже пока ни на что не влияет
+    # brightness
+    "fade_method": None,  # None | default | logarithmic
 }
 
 cashed_dict_of_devices = dict()
@@ -113,6 +120,8 @@ for key in timer_values_of_names:
 """
     Settings
 """
+
+load_args = sys.argv
 
 
 def f_settings(keyword: str, element: str = "main") -> str:
@@ -203,13 +212,14 @@ def load_settings(path: Path = settings_path, do_migrate=True, do_update=True):
                       "\n# " + migrate_sect.get("fatal_error_message"))
                 msb.showerror(titled_name + migrate_sect.get("title"), f"{err}\n" +
                               migrate_sect.get("fatal_error_message"))
-            save_settings(path)
+            if do_update:
+                save_settings(path)
         else:
             settings = data
-    elif do_update:
-        if not path.parent.exists():
-            path.parent.mkdir()
-        save_settings(path)
+    # elif do_update:
+    #     if not path.parent.exists():
+    #         path.parent.mkdir()
+    #     save_settings(path)
     if do_update and not Path(settings["_venv_dir"]).exists():
         settings["_venv_dir"] = str(Path.cwd())
         save_settings(path)
@@ -444,7 +454,20 @@ def update_brightness(icon: pystray.Icon = None, *_):
             #     m_b = calc_value_v1(cam_b)
             print(f"  *", sect.get("brightness_after"), m_b)
             print()
-            sbc.set_brightness(m_b, display)
+            match settings["fade_method"]:
+                case None | "":
+                    sbc.set_brightness(m_b, display)
+                case "default":
+                    sbc.fade_brightness(m_b, display=display)
+                case "logarithmic":
+                    sbc.fade_brightness(m_b, logarithmic=True, display=display)
+                case _:
+                    _sect = lang.Section("main.json", "brightness_update", "errors")
+                    msb.showerror(
+                        short_app_name + _sect.get("incorrect_settings_title"),
+                        _sect.get("fade_method_error").format(settings["fade_method"]))
+                    settings["fade_method"] = None
+                    save_settings()
             reply[display] = {
                 "old_b": old_b,
                 "m_b": m_b
@@ -526,6 +549,12 @@ def get_free_displays(dis: list, devices: dict) -> list:
             if display in devices[device]["displays"]:
                 free_displays.remove(display)
     return free_displays
+
+
+def get_spec():
+    import platform as plf
+    return (f"{plf.platform()} at {plf.machine()}, "
+            f"{short_app_name} v{version}.{branch}.{edition}")
 
 
 """
@@ -1302,7 +1331,7 @@ def main():
             if settings["im_hiding_message"] and settings["notifications"]:
                 sys_icon.notify(
                     tray_sect.get("hid_in_tray"),
-                    tray_sect.get("hid_in_tray_title")
+                    tray_sect.get("hid_in_tray_title").format(short_app_name)
                 )
                 settings["im_hiding_message"] = False
                 save_settings()
@@ -1358,19 +1387,106 @@ def check_for_updates(tag_or_sha, c_edition, user_files_path, save_old_files, do
     return False
 
 
+def make_lock_file(file_path: Path | None, _this_app: psutil.Process | int | None,
+                   _error_counter: int = 0):
+    if not file_path:
+        file_path = Path(waba_user_files_path, ".lock")
+    if not _this_app:
+        _this_app = psutil.Process().pid
+    elif type(_this_app) == psutil.Process:
+        _this_app = _this_app.pid
+    with file_path.open("w+") as lock:
+        lock.writelines([str(_this_app), "\n", str(_error_counter)])
+
+
+def is_already_running(file_path: Path = None, _this_app: psutil.Process = None) -> bool:
+    if not file_path:
+        file_path = Path(waba_user_files_path, ".lock")
+    if not _this_app:
+        _this_app = psutil.Process()
+    if file_path.exists():
+        with lock_file.open("r+") as lock:
+            _saved_pid = int(lock.readline())
+            _error_counter = int(lock.readline())
+        if psutil.pid_exists(_saved_pid):
+            _locked_p = psutil.Process()
+            if _locked_p.is_running() and _locked_p.name() == _this_app.name():
+                return True, _saved_pid, _error_counter
+    return False, None, None
+
+
+def copy_specification_to_clipboard():
+    _window = tk.Tk()
+    _window.iconbitmap(Path("resources", "logo2.ico"))
+    _window.withdraw()
+    _window.clipboard_clear()
+    _window.clipboard_append(get_spec())
+    print(get_spec())
+    sect = lang.Section("main.json", "starter")
+    msb.showinfo(titled_name + sect.get("info"),
+                 sect.get("spec_copied"))
+
+
 if __name__ == "__main__":
     lang.load_default()
     load_settings()
     load_version_file()
-    if not settings["language"]:
-        settings["language"] = lang.chose_lang()
+
+    if keyboard.is_pressed("SHIFT") or "--copy-spec" in load_args:
+        copy_specification_to_clipboard()
+
+    if f_settings("lock_file"):
+        this_app = psutil.Process()
+        lock_file = Path(waba_user_files_path, ".lock")
+        running, saved_pid, error_count = is_already_running(lock_file, this_app)
+    else:
+        this_app, lock_file = None, None
+        running, saved_pid, error_count = False, 0, 0
+
+    if not settings["language"] and not running:
+        settings["language"] = \
+            lang.chose_lang(allow_google_translate=f_settings("google_translate"))
         save_settings()
     lang.load(settings["language"])
     sett_lang_sect = lang.Section("main.json", "starter", "errors")
-    if settings["checking_for_updates"] and f_settings("autoupdate", "main"):
+    if settings["checking_for_updates"] and f_settings("autoupdate", "main") and not running:
         check_for_updates(github_tag, edition, waba_user_files_path, True, True)
     try:
         if do_start:
+
+            if running:
+                debug_window = tk.Tk()
+                debug_window.iconbitmap(Path("resources", "logo2.ico"))
+                debug_window.withdraw()
+                if not error_count >= 3:
+                    msb.showerror(
+                        titled_name + sett_lang_sect.get("already_launched_title"),
+                        sett_lang_sect.get("already_launched"))
+                    make_lock_file(lock_file, psutil.Process(saved_pid), error_count + 1)
+                    debug_window.destroy()
+                    do_start = False
+                    raise LookupError
+                else:
+                    if msb.askyesno(
+                            titled_name + sett_lang_sect.get("already_launched_title"),
+                            sett_lang_sect.get("ask_to_kill_process")):
+                        try:
+                            psutil.Process(saved_pid).terminate()
+                            debug_window.destroy()
+                        except Exception as error:
+                            msb.showerror(
+                                titled_name + sett_lang_sect.get("already_launched_title"),
+                                sett_lang_sect.get("failed_to_terminate_process") + f"\n\n{error}")
+                            debug_window.destroy()
+                            do_start = False
+                            raise LookupError
+                    else:
+                        debug_window.destroy()
+                        do_start = False
+                        raise LookupError
+            if lock_file.parent.exists():
+                make_lock_file(lock_file, this_app)
+
             displays = sbc.list_monitors()
             if len(displays) == 0:
                 debug_window = tk.Tk()
@@ -1407,5 +1523,8 @@ if __name__ == "__main__":
                 cashed_dict_of_devices[cs] = settings["devices"][cs].copy()
 
             main()
+
+            if f_settings("lock_file"):
+                os.remove(lock_file)
     except LookupError:
         pass

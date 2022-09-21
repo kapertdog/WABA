@@ -1,6 +1,6 @@
 altgraph==0.17.2
 anyio==3.6.1
-auto-py-to-exe==2.23.0
+auto-py-to-exe==2.21.0
 bottle==0.12.23
 bottle-websocket==0.2.9
 certifi==2022.6.15
@@ -31,6 +31,7 @@ packaging==21.3
 pefile==2022.5.30
 Pillow==9.2.0
 progress==1.6
+psutil==5.9.2
 pycparser==2.21
 pyinstaller==5.3
 pyinstaller-hooks-contrib==2022.8

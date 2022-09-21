@@ -11,12 +11,12 @@
 [![packed-with](https://img.shields.io/badge/packed%20with-auto--py--to--exe-blueviolet)](https://github.com/brentvollebregt/auto-py-to-exe)
 [![platform](https://img.shields.io/badge/platform-win--64-blue)]()
 
-<!--
+
 ![GitHub release (latest by date including pre-releases)](https://img.shields.io/github/v/release/kapertdog/waba?include_prereleases)
--->
 [![Crowdin](https://badges.crowdin.net/waba/localized.svg)](https://crowdin.com/project/waba)
 [![wakatime](https://wakatime.com/badge/user/c953efa8-fc06-4e4c-8158-fcc289fcf2e6/project/91d34353-79ef-47f5-b28d-d5e5c123c2ad.svg)](https://wakatime.com/@kapertdog/projects/bvftxzdqum)
 #### [🙏 Help me with the translation!](https://crowdin.com/project/waba)
+#### [💸 Дать на покушоть](https://www.donationalerts.com/r/kapertdog)
 ### Linux? Gnome? Посмотрите форк [GABA](https://github.com/levkopo/GABA) 👀
 Странный, нужный только мне скрипт, подстраивающий яркость дисплея основываясь на данных с камеры
 

@@ -51,12 +51,16 @@ example = {
 
 """ Работа с файлами """
 
+short_name_by_full_name = {}
+for _key in googletrans.LANGUAGES:
+    short_name_by_full_name[googletrans.LANGUAGES[_key]] = _key
+
 
 def loaded():
     """
     :return: True if any lang is loaded
     """
-    return bool(default_lang) or bool(current_lang)
+    return bool(default_lang) and bool(current_lang)
 
 
 def _load(file_path: Path):
@@ -381,7 +385,8 @@ class GenerateLang(tk.Tk):
 
 
 class LangSelectWindow(tk.Tk):
-    def __init__(self):
+    def __init__(self, gt=True):
+        self.allow_google_translate = gt
         lang_sect = Section("languages.json", "chose_lang")
         super().__init__()
         if not loaded():
@@ -420,7 +425,8 @@ class LangSelectWindow(tk.Tk):
         self.translate_btn = ttk.Button(
             self.buttons_frame,
             text=lang_sect.get("translate"),
-            command=self.generate
+            command=self.generate,
+            state="normal" if self.allow_google_translate else "disabled"
         )
         self.translate_btn.pack(side=tk.LEFT, pady=2)
 
@@ -448,7 +454,7 @@ class LangSelectWindow(tk.Tk):
             except Exception as err:
                 msb.showerror(g_lang_sect.get("error", "translation_failed_title"),
                               f"{g_lang_sect.get('error', 'translation_failed')}\n\n{err}")
-        r_main_window = LangSelectWindow()
+        r_main_window = LangSelectWindow(self.allow_google_translate)
         self.selected_lang.set(r_main_window.chose_lang())
 
     def import_f(self):
@@ -473,19 +479,24 @@ class LangSelectWindow(tk.Tk):
         self.destroy()
 
 
-def chose_lang():
+def chose_lang(allow_google_translate=True):
     while True:
         sect = Section("languages.json", "chose_lang")
-        lang = LangSelectWindow().chose_lang()
+        lang = LangSelectWindow(gt=allow_google_translate).chose_lang()
         load(lang, False)
         diff, count = check_differences(False)
-        if count - diff > count // 2 and lang in googletrans.LANGUAGES:
+        if count - diff > count // 4 and lang in googletrans.LANGUAGES and allow_google_translate:
             match msb.askyesnocancel(
-                    sect.get("title"),
+                    short_app_name + ": " + sect.get("title"),
                     sect.get("translate_missing_elements").format(lang, diff // (count / 100))):
                 case True:
-                    lang = translate_only_missing(lang)
-                    break
+                    try:
+                        lang = translate_only_missing(lang)
+                        break
+                    except Exception as err:
+                        g_lang_sect = Section("languages.json", "generate_lang")
+                        msb.showerror(short_app_name + g_lang_sect.get("error", "translation_failed_title"),
+                                      f"{g_lang_sect.get('error', 'translation_failed')}\n\n{err}")
                 case False:
                     break
                 case None:

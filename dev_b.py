@@ -28,8 +28,8 @@ titled_name = short_app_name + ": "
 lang.short_app_name = short_app_name
 
 title = short_app_name + " (v.Dev_B)"
-version = "0.3.2.0"
-github_tag = "dev_b_pre-10"
+version = "0.3.2.1"
+github_tag = "dev_b_pre-11"
 edition = "venv"  # Всего 3 издания: "venv", "folder" и "exe"
 branch = "master"  # Пока планирую 2 ветки: "master" и "only-tray"
 
@@ -439,7 +439,7 @@ def update_brightness(icon: pystray.Icon = None, *_):
         m_cam_b = devices_values[device][cam_b]
         print(sect.get("brightness_from_sensor"), f"{cam_b}/255 -> {m_cam_b}")
         for display in disp:
-            print("*", sect.get("display"))
+            print("*", sect.get("display"), display)
             if display not in displays_values:
                 generate_display_values(display)
                 print("  ~", sect.get("values_for_display_is_calculated"))
@@ -464,7 +464,7 @@ def update_brightness(icon: pystray.Icon = None, *_):
                 case _:
                     _sect = lang.Section("main.json", "brightness_update", "errors")
                     msb.showerror(
-                        short_app_name + _sect.get("incorrect_settings_title"),
+                        titled_name + _sect.get("incorrect_settings_title"),
                         _sect.get("fade_method_error").format(settings["fade_method"]))
                     settings["fade_method"] = None
                     save_settings()
@@ -555,6 +555,25 @@ def get_spec():
     import platform as plf
     return (f"{plf.platform()} at {plf.machine()}, "
             f"{short_app_name} v{version}.{branch}.{edition}")
+
+
+def take_a_photo(camera):
+    sect = lang.Section("main.json", "brightness_update", "take_a_photo")
+    print(f"-=- {time.ctime()} -=-")
+    print(f"= {sect.get('title')} =")
+    print(sect.get('device'), camera)
+    sc_time = time.gmtime()
+    screenshot_name = f"{camera[1:-1]} {sc_time.tm_year}_{sc_time.tm_mon}_" \
+                      f"{sc_time.tm_mday} {sc_time.tm_hour}_{sc_time.tm_min}_{sc_time.tm_sec}.png"
+    sc_path = Path(waba_user_files_path, "cashed", "photos", screenshot_name)
+    with iio.get_reader(camera) as reader:
+        screenshot = reader.get_data(0)
+    if not sc_path.parent.exists():
+        os.makedirs(sc_path.parent)
+    iio.imwrite(sc_path, screenshot)
+    print(sect.get('photo_path'), sc_path)
+    os.startfile(sc_path)
+    print()
 
 
 """
@@ -678,9 +697,11 @@ def main():
         if displays_is_device_exist_var.get():
             next_cam_button.config(state="normal")
             turned_cam_chbtn.config(state="normal")
+            get_photo_btn.config(state="normal")
         else:
             next_cam_button.config(state="disabled")
             turned_cam_chbtn.config(state="disabled")
+            get_photo_btn.config(state="disabled")
         turned_cam_chbtn_var.set(displays_selected_device_var.get() in cashed_dict_of_devices)
         turned_cam_chbtn.config(text=f"{lang.get('main.json', 'pages', 'displays', 'current_sensor')}"
                                      f" {displays_selected_device_var.get()}")
@@ -719,6 +740,9 @@ def main():
             main_window.update()
         check_two()
     ...
+
+    def t_a_p():
+        take_a_photo(displays_selected_device_var.get())
 
     def install_update(icon):
         match edition:
@@ -1042,27 +1066,36 @@ def main():
 
     displays_lists_center_frame.pack(fill=tk.Y, anchor="center", pady=5)
 
-    method_entry_lbl = tk.Label(
+    # method_entry_lbl = tk.Label(
+    #     displays_downside_frame,
+    #     text=dp_sect.get("function"),
+    #     state="disabled",
+    # )
+    # method_entry_lbl.pack(side=tk.LEFT)
+    # method_entry = ttk.Entry(
+    #     displays_downside_frame,
+    #     state="disabled",
+    # )
+    # method_entry.pack(fill=tk.X, side=tk.LEFT)
+    help_lbl = tk.Label(
         displays_downside_frame,
-        text=dp_sect.get("function"),
-        state="disabled",
+        text=dp_sect.get("help"),
+        anchor=tk.CENTER
     )
-    method_entry_lbl.pack(side=tk.LEFT)
-    method_entry = ttk.Entry(
-        displays_downside_frame,
-        state="disabled",
-    )
-    method_entry.pack(fill=tk.X, side=tk.LEFT)
+    help_lbl.pack(fill=tk.X, side=tk.LEFT)
+    take_photo_image = tk.PhotoImage(file="resources/take_photo.png")
     get_photo_btn = tk.Button(
         displays_downside_frame,
-        text=dp_sect.get("take_a_photo"),
-        state="disabled",
+        # text=dp_sect.get("take_a_photo"),
+        # state="disabled",
+        image=take_photo_image,
+        command=t_a_p,
     )
     get_photo_btn.pack(side=tk.RIGHT)
     ...  # Пакуем глобальных шизоидов
     displays_top_line_frame.pack(fill=tk.X, side=tk.TOP)
     displays_lists_frame.pack()
-    displays_downside_frame.pack(fill=tk.BOTH, side=tk.BOTTOM, padx=5, pady=5)
+    displays_downside_frame.pack(fill=tk.BOTH, side=tk.BOTTOM, padx=5, pady=2)
     ...  # Добавляем
     tab_control.add(displays_page, text=dp_sect.get("title"))
 
@@ -1077,6 +1110,11 @@ def main():
     settings_page = ttk.Frame(tab_control)
     sp_sect = lang.Section("main.json", "pages", "extra")
     ...  # Прописываем элементы
+    ...  # # ПОД-СТРАНИЦЫ
+    sub_tab_control = ttk.Notebook(
+        settings_page,
+    )
+    sub_tab_control.pack(fill=tk.BOTH)
 
     def down_upd():
         if not downloader_busy:
@@ -1112,7 +1150,9 @@ def main():
     )
     install_update_button.pack()
     ...  # Добавляем
-    tab_control.add(settings_page, text=sp_sect.get("title"), state="disabled")
+    tab_control.add(settings_page, text=sp_sect.get("title"),
+                    # state="disabled"
+                    )
 
     ...  # Страница About
     about_page = ttk.Frame(tab_control)
@@ -1410,7 +1450,7 @@ def is_already_running(file_path: Path = None, _this_app: psutil.Process = None)
             _error_counter = int(lock.readline())
         if psutil.pid_exists(_saved_pid):
             _locked_p = psutil.Process()
-            if _locked_p.is_running() and _locked_p.name() == _this_app.name():
+            if _locked_p.name() == _this_app.name():
                 return True, _saved_pid, _error_counter
     return False, None, None
 
@@ -1458,10 +1498,11 @@ if __name__ == "__main__":
                 debug_window = tk.Tk()
                 debug_window.iconbitmap(Path("resources", "logo2.ico"))
                 debug_window.withdraw()
-                if not error_count >= 3:
+                if not error_count >= 2:
                     msb.showerror(
                         titled_name + sett_lang_sect.get("already_launched_title"),
-                        sett_lang_sect.get("already_launched"))
+                        sett_lang_sect.get("already_launched_short" if
+                                           error_count < 1 else "already_launched"))
                     make_lock_file(lock_file, psutil.Process(saved_pid), error_count + 1)
                     debug_window.destroy()
                     do_start = False
@@ -1469,18 +1510,21 @@ if __name__ == "__main__":
                 else:
                     if msb.askyesno(
                             titled_name + sett_lang_sect.get("already_launched_title"),
-                            sett_lang_sect.get("ask_to_kill_process")):
+                            sett_lang_sect.get("ask_to_kill_process" if error_count <= 100
+                                               else "please_press_yes")):
                         try:
                             psutil.Process(saved_pid).terminate()
                             debug_window.destroy()
                         except Exception as error:
                             msb.showerror(
                                 titled_name + sett_lang_sect.get("already_launched_title"),
-                                sett_lang_sect.get("failed_to_terminate_process") + f"\n\n{error}")
+                                sett_lang_sect.get(
+                                    "failed_to_terminate_process") + f"\n\n{error}")
                             debug_window.destroy()
                             do_start = False
                             raise LookupError
                     else:
+                        make_lock_file(lock_file, psutil.Process(saved_pid), error_count + 1)
                         debug_window.destroy()
                         do_start = False
                         raise LookupError

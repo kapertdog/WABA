@@ -13,8 +13,7 @@ import googletrans
 from pathlib import Path
 
 # TODO:
-#  Поддержка смены языка в реальном времени,
-#  Импорт переводов из файла,
+#  Поддержка смены языка в реальном времени
 
 
 short_app_name = "Waba"

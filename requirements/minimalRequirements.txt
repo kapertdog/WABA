@@ -1,0 +1,9 @@
+Pillow
+keyboard
+imageio
+imageio-ffmpeg
+psutil
+PyYAML
+pystray
+requests
+screen-brightness-control

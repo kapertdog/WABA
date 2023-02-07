@@ -9,7 +9,7 @@ import tkinter as tk
 from tkinter import ttk
 from tkinter import filedialog as fd
 from tkinter import messagebox as msb
-import googletrans
+# import googletrans
 from pathlib import Path
 
 # TODO:
@@ -50,9 +50,9 @@ example = {
 
 """ Работа с файлами """
 
-short_name_by_full_name = {}
-for _key in googletrans.LANGUAGES:
-    short_name_by_full_name[googletrans.LANGUAGES[_key]] = _key
+# short_name_by_full_name = {}
+# for _key in googletrans.LANGUAGES:
+#     short_name_by_full_name[googletrans.LANGUAGES[_key]] = _key
 
 
 def loaded():
@@ -174,103 +174,103 @@ def import_lang(directory: Path):
         raise TypeError("Wrong file or path")
 
 
-def _translate(data: dict, lang_from: str, lang_to: str,
-               translator: googletrans.Translator = None):
-    if not translator:
-        translator = googletrans.Translator()
-    result = dict()
-    for key in data:
-        if type(data[key]) == dict:
-            result[key] = _translate(data[key], lang_from, lang_to, translator)
-        else:
-            result[key] = translator.translate(data[key], lang_to, lang_from).text
-    return result
+# def _translate(data: dict, lang_from: str, lang_to: str,
+#                translator: googletrans.Translator = None):
+#     if not translator:
+#         translator = googletrans.Translator()
+#     result = dict()
+#     for key in data:
+#         if type(data[key]) == dict:
+#             result[key] = _translate(data[key], lang_from, lang_to, translator)
+#         else:
+#             result[key] = translator.translate(data[key], lang_to, lang_from).text
+#     return result
 
 
-def make_translate(lang_to: str):
-    def_path = Path("languages", "defaults")
-    out_path = Path(cashed_langs_path, f"auto-{lang_to}")
-    if out_path.exists():
-        shutil.rmtree(out_path)
-    new_lang_pack = dict()
-    for file in os.listdir(def_path):
-        with Path(def_path, file).open("r+", encoding="UTF-8") as r_file:
-            if file[-5:] == ".json":
-                new_lang_pack[file] = json.load(r_file)
-            else:
-                new_lang_pack[file] = r_file.read()
-
-    if not out_path.exists():
-        os.makedirs(out_path)
-
-    translator = googletrans.Translator()
-
-    for file in new_lang_pack:
-        if file[-5:] == ".json":
-            new_lang_pack[file]["info"]["%head%"] = "ru"
-            new_lang_pack[file]["info"]["%name%"] = googletrans.LANGUAGES[lang_to]
-            new_lang_pack[file]["data"] = \
-                _translate(new_lang_pack[file]["data"], "ru", lang_to, translator)
-            with Path(out_path, file).open("w+", encoding="UTF-8") as w_file:
-                json.dump(new_lang_pack[file], w_file, sort_keys=True, indent=2)
-        else:
-            new_lang_pack[file] = _translate({"data": new_lang_pack[file]}, "ru", lang_to)
-            with Path(out_path, file).open("w+", encoding="UTF-8") as w_file:
-                w_file.write(new_lang_pack[file]["data"])
-
-
-def _translate_only_missing(def_data, data_to_extend, lang_to,
-                            translator: googletrans.Translator,):
-    reply = {}
-    for key in def_data:
-        if type(def_data[key]) == dict:
-            if key not in data_to_extend:
-                reply[key] = _translate(def_data[key], "ru", lang_to, translator)
-            elif def_data[key] == data_to_extend[key]:
-                reply[key] = _translate(def_data[key], "ru", lang_to, translator)
-            else:
-                reply[key] = _translate_only_missing(def_data[key], data_to_extend[key],
-                                                     lang_to, translator)
-        else:
-            if key not in data_to_extend:
-                reply[key] = translator.translate(def_data[key], "ru", lang_to)
-            elif def_data[key] == data_to_extend[key]:
-                reply[key] = translator.translate(def_data[key], "ru", lang_to)
-            else:
-                reply[key] = data_to_extend[key]
-    return reply
+# def make_translate(lang_to: str):
+#     def_path = Path("languages", "defaults")
+#     out_path = Path(cashed_langs_path, f"auto-{lang_to}")
+#     if out_path.exists():
+#         shutil.rmtree(out_path)
+#     new_lang_pack = dict()
+#     for file in os.listdir(def_path):
+#         with Path(def_path, file).open("r+", encoding="UTF-8") as r_file:
+#             if file[-5:] == ".json":
+#                 new_lang_pack[file] = json.load(r_file)
+#             else:
+#                 new_lang_pack[file] = r_file.read()
+#
+#     if not out_path.exists():
+#         os.makedirs(out_path)
+#
+#     translator = googletrans.Translator()
+#
+#     for file in new_lang_pack:
+#         if file[-5:] == ".json":
+#             new_lang_pack[file]["info"]["%head%"] = "ru"
+#             new_lang_pack[file]["info"]["%name%"] = googletrans.LANGUAGES[lang_to]
+#             new_lang_pack[file]["data"] = \
+#                 _translate(new_lang_pack[file]["data"], "ru", lang_to, translator)
+#             with Path(out_path, file).open("w+", encoding="UTF-8") as w_file:
+#                 json.dump(new_lang_pack[file], w_file, sort_keys=True, indent=2)
+#         else:
+#             new_lang_pack[file] = _translate({"data": new_lang_pack[file]}, "ru", lang_to)
+#             with Path(out_path, file).open("w+", encoding="UTF-8") as w_file:
+#                 w_file.write(new_lang_pack[file]["data"])
 
 
-def translate_only_missing(lang_to):
-    new_lang = {}
-    out_path = Path(cashed_langs_path, f"expanded-{lang_to}")
+# def _translate_only_missing(def_data, data_to_extend, lang_to,
+#                             translator: googletrans.Translator,):
+#     reply = {}
+#     for key in def_data:
+#         if type(def_data[key]) == dict:
+#             if key not in data_to_extend:
+#                 reply[key] = _translate(def_data[key], "ru", lang_to, translator)
+#             elif def_data[key] == data_to_extend[key]:
+#                 reply[key] = _translate(def_data[key], "ru", lang_to, translator)
+#             else:
+#                 reply[key] = _translate_only_missing(def_data[key], data_to_extend[key],
+#                                                      lang_to, translator)
+#         else:
+#             if key not in data_to_extend:
+#                 reply[key] = translator.translate(def_data[key], "ru", lang_to)
+#             elif def_data[key] == data_to_extend[key]:
+#                 reply[key] = translator.translate(def_data[key], "ru", lang_to)
+#             else:
+#                 reply[key] = data_to_extend[key]
+#     return reply
 
-    if out_path.exists():
-        shutil.rmtree(out_path)
-    os.makedirs(out_path)
 
-    translator = googletrans.Translator()
-    for file in default_lang:
-        if file[-5:] == ".json":
-            new_lang[file] = {}
-            new_lang[file]["info"] = {
-                "%name%": f"{googletrans.LANGUAGES[lang_to]}",
-                "%head%": current_lang[file]["info"]["%name%"]}
-            if file not in current_lang:
-                new_lang[file] = {}
-            new_lang[file]["data"] = \
-                _translate_only_missing(default_lang[file]["data"], current_lang[file],
-                                        lang_to, translator)
-            with Path(out_path, file).open("w+", encoding="UTF-8") as w_file:
-                json.dump(new_lang[file], w_file, sort_keys=True, indent=2)
-        elif file[-4:] == ".txt":
-            if file not in current_lang:
-                new_lang[file] = \
-                    translator.translate(default_lang[file], "ru", new_lang[file]["info"]["%name%"])
-            elif current_lang[file] == default_lang[file]:
-                new_lang[file] = \
-                    translator.translate(default_lang[file], "ru", new_lang[file]["info"]["%name%"])
-    return f"expanded-{lang_to}"
+# def translate_only_missing(lang_to):
+#     new_lang = {}
+#     out_path = Path(cashed_langs_path, f"expanded-{lang_to}")
+#
+#     if out_path.exists():
+#         shutil.rmtree(out_path)
+#     os.makedirs(out_path)
+#
+#     translator = googletrans.Translator()
+#     for file in default_lang:
+#         if file[-5:] == ".json":
+#             new_lang[file] = {}
+#             new_lang[file]["info"] = {
+#                 "%name%": f"{googletrans.LANGUAGES[lang_to]}",
+#                 "%head%": current_lang[file]["info"]["%name%"]}
+#             if file not in current_lang:
+#                 new_lang[file] = {}
+#             new_lang[file]["data"] = \
+#                 _translate_only_missing(default_lang[file]["data"], current_lang[file],
+#                                         lang_to, translator)
+#             with Path(out_path, file).open("w+", encoding="UTF-8") as w_file:
+#                 json.dump(new_lang[file], w_file, sort_keys=True, indent=2)
+#         elif file[-4:] == ".txt":
+#             if file not in current_lang:
+#                 new_lang[file] = \
+#                     translator.translate(default_lang[file], "ru", new_lang[file]["info"]["%name%"])
+#             elif current_lang[file] == default_lang[file]:
+#                 new_lang[file] = \
+#                     translator.translate(default_lang[file], "ru", new_lang[file]["info"]["%name%"])
+#     return f"expanded-{lang_to}"
 
 
 """ Обработка запросов """
@@ -349,7 +349,8 @@ class GenerateLang(tk.Tk):
         self.langs_list = ttk.Combobox(
             self.select_frame,
             textvariable=self.selected_lang,
-            values=[*googletrans.LANGUAGES]
+            # values=[*googletrans.LANGUAGES]
+            values=[]
         )
         self.langs_list.pack(fill=tk.X, padx=5, pady=5)
 
@@ -449,7 +450,8 @@ class LangSelectWindow(tk.Tk):
         answ = gn_window.chose_lang()
         if answ:
             try:
-                make_translate(answ)
+                ...
+                # make_translate(answ)
             except Exception as err:
                 msb.showerror(g_lang_sect.get("error", "translation_failed_title"),
                               f"{g_lang_sect.get('error', 'translation_failed')}\n\n{err}")
@@ -480,28 +482,30 @@ class LangSelectWindow(tk.Tk):
 
 def chose_lang(allow_google_translate=True):
     while True:
-        sect = Section("languages.json", "chose_lang")
-        lang = LangSelectWindow(gt=allow_google_translate).chose_lang()
+        # sect = Section("languages.json", "chose_lang")
+        # lang = LangSelectWindow(gt=allow_google_translate).chose_lang()
+        lang = LangSelectWindow(gt=False and allow_google_translate).chose_lang()
         load(lang, False)
-        diff, count = check_differences(False)
-        if count - diff > count // 4 and lang in googletrans.LANGUAGES and allow_google_translate:
-            match msb.askyesnocancel(
-                    short_app_name + ": " + sect.get("title"),
-                    sect.get("translate_missing_elements").format(lang, diff // (count / 100))):
-                case True:
-                    try:
-                        lang = translate_only_missing(lang)
-                        break
-                    except Exception as err:
-                        g_lang_sect = Section("languages.json", "generate_lang")
-                        msb.showerror(short_app_name + g_lang_sect.get("error", "translation_failed_title"),
-                                      f"{g_lang_sect.get('error', 'translation_failed')}\n\n{err}")
-                case False:
-                    break
-                case None:
-                    ...
-        else:
-            break
+        # diff, count = check_differences(False)
+        # if count - diff > count // 4 and lang in googletrans.LANGUAGES and allow_google_translate:
+        #     match msb.askyesnocancel(
+        #             short_app_name + ": " + sect.get("title"),
+        #             sect.get("translate_missing_elements").format(lang, diff // (count / 100))):
+        #         case True:
+        #             try:
+        #                 # lang = translate_only_missing(lang)
+        #                 break
+        #             except Exception as err:
+        #                 g_lang_sect = Section("languages.json", "generate_lang")
+        #                 msb.showerror(short_app_name + g_lang_sect.get("error", "translation_failed_title"),
+        #                               f"{g_lang_sect.get('error', 'translation_failed')}\n\n{err}")
+        #         case False:
+        #             break
+        #         case None:
+        #             ...
+        # else:
+        #     break
+        break
     return lang
 
 

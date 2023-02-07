@@ -184,6 +184,7 @@ def window_title(text: str):
 def choose(show: list | tuple | dict,
            top_commands: dict = (),
            bottom_commands: dict = (),
+           hiden_commands: dict = (),
            wrong_answer_command=None,
            wrong_index_command=None,
            title: str = None,
@@ -196,6 +197,8 @@ def choose(show: list | tuple | dict,
     :param top_commands: Dictionary of keys and commands executable when selected (on top of list)
     {"text": func | method}
     :param bottom_commands: Dictionary of keys and commands executable when selected (at bottom of list)
+    {"text": func | method}
+    :param hiden_commands: Dictionary of keys and commands executable when selected (invisible but callable)
     {"text": func | method}
     :param wrong_answer_command: Will be executed if
     the user's provided sting is not found in the provided list
@@ -235,12 +238,14 @@ def choose(show: list | tuple | dict,
             return dir_list[int(answer)]
     # А если строчка
     except ValueError:
-        if answer not in dir_list and wrong_answer_command:
+        if (answer not in dir_list and answer.lower().split(" ")[0] not in hiden_commands) and wrong_answer_command:
             return wrong_answer_command(answer)
         elif answer in top_commands:
             return top_commands[answer]()
         elif answer in bottom_commands:
             return bottom_commands[answer]()
+        elif answer.lower().split(" ")[0] in hiden_commands:
+            return hiden_commands[answer.lower().split(" ")[0]](*answer.split(" ")[1:] if len(answer.split(" ")) >= 2 else [])
     except IndexError:
         if wrong_index_command:
             wrong_index_command(int(answer))
@@ -337,7 +342,7 @@ def file_delete(file=None):
     cls()
     if not file:
         file = choose(sorted(os.listdir(), key=lambda f: os.path.isfile(f)),
-                      {"|cancel|": nothing}, {}, nothing, nothing,
+                      {"|cancel|": nothing}, {}, {}, nothing, nothing,
                       "Что хотите удалить?")
     if bool(file):
         cls()
@@ -412,7 +417,7 @@ def element_delete(element=None):
     global path, selected
     if not element:
         element = choose(decompose(file_data["data"], *selected),
-                         {"|cancel|": nothing}, {}, nothing, nothing,
+                         {"|cancel|": nothing}, {}, {}, nothing, nothing,
                          "Что хотите удалить?")
     if element:
         cls()
@@ -432,6 +437,12 @@ def get_tip():
     if show_tips:
         return file_tips[random.randint(0, len(file_tips) - 1)]
 
+show_tips = True
+
+def tip_togle(value=not show_tips):
+    global show_tips
+    show_tips = value
+
 
 file_top_choose_commands = {
     "|<--|": file_back
@@ -441,6 +452,13 @@ file_bottom_choose_commands = {
     "|del|": file_delete,
     "| + |": file_make_new
 }
+file_hiden_choose_commands = {
+    "/back": file_back,
+    "/home": file_home,
+    "/cwd": file_home,
+    "//tips": tip_togle,
+    "//exit": exit,
+}
 element_top_choose_commands = {
     "|<--|": element_back
 }
@@ -449,17 +467,20 @@ element_bottom_choose_commands = {
     "|+value|": element_make_new_element,
     "|+section|": element_make_new_section
 }
-show_tips = True
+element_hiden_choose_commands = {
+    "/exit": None,
+    "/back": None
+}
 file_tips = [
     # 'Подсказка: Что-бы воспользоваться особыми командами, используйте //COMMAND-PROMPT',
     '#Подсказка: Не обязательно выбирать | + |, просто начните вводить название нового файла',
     '#Подсказка: Выбрать элемент можно не только по его индексу: можете написать его название',
     # '#Подсказка: Что-бы перейти к конкретному пути воспользуйтесь //GO-TO (путь до файла/папки)',
     # '#Подсказка: Список доступных команд можно получить вызвав //HELP',
-    # '#Подсказка: Эти подсказки можно скрыть, просто введите //TIPS',
+    '#Подсказка: Эти подсказки можно скрыть, просто введите //TIPS',
     # '#Подсказка: Для доступа к функции eval() используйте //EVAL',
-    # '#Подсказка: Вернутся в домашнюю папку можно при помощи //HOME или //CWD',
-    # '#Подсказка: Выйти из программы можно сочетанием клавиш "CTRL + C", или введя //EXIT',
+    '#Подсказка: Вернутся в домашнюю папку можно при помощи /HOME или /CWD',
+    '#Подсказка: Выйти из программы можно сочетанием клавиш "CTRL + C", или введя //EXIT',
     '#Интересное: Согласится можно по разному, например "ДА", "sure" и "1" тоже считаются за согласие',
     '#Интересное: Изначально, эта строка должна была показывать результат предыдущего действия',
 ]
@@ -473,9 +494,10 @@ def cli_edit_v2():
         cls()
         if not path:
             answ = choose(sorted(os.listdir(), key=lambda fm: os.path.isfile(fm)),
-                          file_top_choose_commands, file_bottom_choose_commands, file_make_new, nothing,
+                          file_top_choose_commands, file_bottom_choose_commands, 
+                          file_hiden_choose_commands, file_make_new, nothing,
                           "Выберите файл для редактирования или создайте новый",
-                          file_tips[random.randint(0, len(file_tips) - 1)])
+                          get_tip())
             if answ:
                 if os.path.isdir(answ):
                     os.chdir(answ)
@@ -486,10 +508,8 @@ def cli_edit_v2():
                 file_data = json.load(file)
             element_show_info()
             answ = choose(decompose(file_data["data"], *selected),
-                          element_top_choose_commands,
-                          element_bottom_choose_commands,
-                          element_make_new,
-                          nothing,
+                          element_top_choose_commands, element_bottom_choose_commands,
+                          element_hiden_choose_commands, element_make_new, nothing,
                           "Выберите элемент для редактирования или раздел для просмотра")
             if answ:
                 element = decompose(file_data["data"], *selected, answ)

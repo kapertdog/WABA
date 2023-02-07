@@ -6,6 +6,8 @@ import os
 import sys
 import threading
 import PIL.Image
+import PIL.ImageDraw
+import PIL.ImageFont
 import keyboard
 import screen_brightness_control as sbc
 import imageio as iio
@@ -16,6 +18,7 @@ from statistics import mean
 from pathlib import Path
 from autostart import autostart
 from languages import manager as lang
+from dataclasses import dataclass
 import psutil
 import pystray
 import yaml
@@ -28,7 +31,7 @@ titled_name = short_app_name + ": "
 lang.short_app_name = short_app_name
 
 title = short_app_name + " (v.Dev_B)"
-version = "0.3.2.1"
+version = "0.3.3.0"
 github_tag = "dev_b_pre-11"
 edition = "venv"  # Всего 3 издания: "venv", "folder" и "exe"
 branch = "master"  # Пока планирую 2 ветки: "master" и "only-tray"
@@ -44,7 +47,7 @@ branch = "master"  # Пока планирую 2 ветки: "master" и "only-t
     Defaults
 """
 # Default settings values
-settings_version = 9
+settings_version = 10
 settings_path = Path(os.getenv("APPDATA", ""), short_app_name.lower(), "settings.yaml")
 waba_user_files_path = Path(os.getenv("APPDATA", ""), short_app_name.lower())
 lang.cashed_langs_path = Path(waba_user_files_path, "cashed", "languages")
@@ -159,14 +162,18 @@ def migrate_settings(data):
     print(f"-=- {migrate_sect.get('migration_required')} -=-")
     data = check(data, settings)
 
-    match data["settings_version"]:
-        case 7:
-            data = reset_settings(data, "displays_calibration", "sensors_calibration")
+    # match data["settings_version"]:
+    #     case 7:
+    #         data = reset_settings(data, "displays_calibration", "sensors_calibration")
             # msb.showwarning(migrate_sect.get("title"),
             #                 migrate_sect.get("reset", "warn_top_text")
             #                 + "\n\n"
             #                 + migrate_sect.get("reset", "calibration"))
             # data["devices"] = {}
+
+    v = data["settings_version"]
+    if v <= 10:
+        data = reset_settings(data, "displays_calibration", "sensors_calibration")
 
     data["settings_version"] = settings_version
     print(f"-=-  {migrate_sect.get('successful')}  -=-")
@@ -184,6 +191,9 @@ def reset_settings(data, *args):
                 data["displays"] = {}
             case "sensors_calibration":
                 data["devices"] = {}
+            case _ as variable if variable in data:
+                data[variable] = settings[variable]
+
         warn_bottom_text_list.append(migrate_sect.get("reset", i))
     msb.showwarning(titled_name + migrate_sect.get("title"),
                     migrate_sect.get("reset", "warn_top_text") + "\n\n" + "\n".join(warn_bottom_text_list))
@@ -234,6 +244,45 @@ def load_version_file():
         edition = data["edition"]
         github_tag = data["version"]
         version = f'{data["version"][:7]}'
+
+
+class SettingsProvider:
+    """
+        Класс-заглушка на будущее
+    """
+    def __init__(self):
+        self.data = settings
+        self.app_settings_version = settings_version
+        ...
+
+    @staticmethod
+    def load(*args, **kwargs):
+        return load_settings(*args, **kwargs)
+
+    @staticmethod
+    def save(*args, **kwargs):
+        return save_settings(*args, **kwargs)
+
+    @staticmethod
+    def get(*args):
+        return lang.decompose(settings, *args)
+
+    @staticmethod
+    def get_feature_value(*args, **kwargs):
+        return f_settings(*args, **kwargs)
+
+
+class UpdateProvider:
+    def __init__(self):
+        ...
+
+
+@dataclass
+class VersionProvider:
+    version: str = version
+    edition: str = edition
+    github_tag: str = edition
+    branch: str = edition
 
 
 """
@@ -570,7 +619,18 @@ def take_a_photo(camera):
         screenshot = reader.get_data(0)
     if not sc_path.parent.exists():
         os.makedirs(sc_path.parent)
+    else:
+        print(sect.get("erasing_old_files"))
+        for file in os.listdir(sc_path.parent):
+            os.remove(Path(sc_path.parent, file))
     iio.imwrite(sc_path, screenshot)
+    with PIL.Image.open(sc_path) as out_photo:
+        d1 = PIL.ImageDraw.Draw(out_photo)
+        d1.text((28, 36),
+                # f"{sect.get('device')} {camera}\n{screenshot.mean()}/255",
+                f"{camera}\n{screenshot.mean()}/255",
+                fill=(0, 255, 0))
+        out_photo.save(sc_path)
     print(sect.get('photo_path'), sc_path)
     os.startfile(sc_path)
     print()
@@ -1439,7 +1499,7 @@ def make_lock_file(file_path: Path | None, _this_app: psutil.Process | int | Non
         lock.writelines([str(_this_app), "\n", str(_error_counter)])
 
 
-def is_already_running(file_path: Path = None, _this_app: psutil.Process = None) -> bool:
+def is_already_running(file_path: Path = None, _this_app: psutil.Process = None):
     if not file_path:
         file_path = Path(waba_user_files_path, ".lock")
     if not _this_app:

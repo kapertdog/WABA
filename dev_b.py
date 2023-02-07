@@ -172,7 +172,7 @@ def migrate_settings(data):
             # data["devices"] = {}
 
     v = data["settings_version"]
-    if v <= 10:
+    if v < 8:
         data = reset_settings(data, "displays_calibration", "sensors_calibration")
 
     data["settings_version"] = settings_version

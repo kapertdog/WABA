@@ -1,42 +1,68 @@
-# WABA (Windows Automatic Brightness Adjustment)
+## WABA (Windows Automatic Brightness Adjustment)
+Uses your camera or hand-made light sensor to autocorrect display's brightness
+
+> Still in dev, but here some plans to do: [TODO.md](TODO.md)
+
+## Screenshots
+...
+
+## Hardware requirements
+Windows:
+- Windows 7 or newer
+- x32 / x86 compatible processor _(not tested on arm yet)_
+- \> 50MB RAM
+- ~200MiB hardware space _(and ~150MiB more while self updating, turned off by default)_
+- at least one sensor device:
+  - fmpeg / Imageio / OpenCV compatible camera
+  - web-socket / COM serial port compatible device with luminance sensor
+
+Linux / MacOS:
+- _not tested yet_
+
+
+## Installation guide
+1. Go to [releases](./releases)
+2. Chose version (lastest **release** recommended)
+3. Follow instruction in release description
+
 <!-- 
+> Also, designed for work with [silly-update-hub](https://github.com/strange-dog-s-workshop/silly-update-hub): 
+> way to centralize auto-updating for some my projects!
+-->
+
+## Build guide
+1. Download and install Python 3.10 or newer
+2. Download and unpack repository-zip 
+3. ...
+
+## Credits / Licenses
+This project uses next packets:
+- **pls don't forget to fill this up**
+
+And also next resources:
+- Default icons set: ...
+- [Google icons set](https://fonts.google.com/icons) 
+([licence](https://developers.google.com/fonts/docs/material_symbols?hl=ru#licensing))
+- ...
+
+## Badges
+
 [![forthebadge](https://forthebadge.com/images/badges/made-with-python.svg)](https://forthebadge.com)
 [![forthebadge](https://forthebadge.com/images/badges/open-source.svg)](https://forthebadge.com)
 [![forthebadge](https://forthebadge.com/images/badges/built-with-love.svg)](https://forthebadge.com)
 [![forthebadge](https://forthebadge.com/images/badges/gluten-free.svg)](https://forthebadge.com)
 [![forthebadge](https://forthebadge.com/images/badges/you-didnt-ask-for-this.svg)](https://forthebadge.com)
--->
 
-[![made-with-python](https://img.shields.io/badge/made%20with-Python-1f425f.svg)](https://www.python.org/)
-[![packed-with](https://img.shields.io/badge/packed%20with-auto--py--to--exe-blueviolet)](https://github.com/brentvollebregt/auto-py-to-exe)
-[![platform](https://img.shields.io/badge/platform-win--64-blue)]()
-
-
-![GitHub release (latest by date including pre-releases)](https://img.shields.io/github/v/release/kapertdog/waba?include_prereleases)
 [![Crowdin](https://badges.crowdin.net/waba/localized.svg)](https://crowdin.com/project/waba)
 [![wakatime](https://wakatime.com/badge/user/c953efa8-fc06-4e4c-8158-fcc289fcf2e6/project/91d34353-79ef-47f5-b28d-d5e5c123c2ad.svg)](https://wakatime.com/@kapertdog/projects/bvftxzdqum)
-#### [🙏 Help me with the translation!](https://crowdin.com/project/waba)
-#### [💸 Дать на покушоть](https://www.donationalerts.com/r/kapertdog)
-### Linux? Gnome? Посмотрите форк [GABA](https://github.com/levkopo/GABA) 👀
-Странный, нужный только мне скрипт, подстраивающий яркость дисплея основываясь на данных с камеры
 
-![image](https://user-images.githubusercontent.com/40202917/180593306-dfec4aef-4c4a-452f-9a47-4588045f531e.png)
-
-Нагружающий систему
-
-![image](https://user-images.githubusercontent.com/40202917/180593681-c51926e8-e785-45bf-b5ad-aa5122dd1f16.png)
-
-Радующий кривыми уведомлениями
-
-![image](https://user-images.githubusercontent.com/40202917/180593362-411d354a-b819-48f1-bafc-8a05b2e1b7f0.png)
-
-Непонятными настройками
-
-![image](https://user-images.githubusercontent.com/40202917/180593919-7e09355c-f7e9-464c-812b-bf744a910afa.png)
-
-И никак не связанной с основной частью возможностью скрываться в трей
-
-![image](https://user-images.githubusercontent.com/40202917/180593411-bbc82836-60e3-4e38-a6c5-bab419ff94bf.png)
+<!-- 
+> Linux? Gnome? Look at fork [GABA](https://github.com/levkopo/GABA) 👀
+[![made-with-python](https://img.shields.io/badge/made%20with-Python-1f425f.svg)](https://www.python.org/)
+[![platform](https://img.shields.io/badge/platform-win--64-blue)]()
+![GitHub release (the latest by date, including pre-releases)](https://img.shields.io/github/v/release/kapertdog/waba?include_prereleases)
+[![packed-with](https://img.shields.io/badge/packed%20with-auto--py--to--exe-blueviolet)](https://github.com/brentvollebregt/auto-py-to-exe)
+### [🌍 Crowdin page](https://crowdin.com/project/waba)
+-->
 
 
-###### ... Но сделанный с любовью 💕

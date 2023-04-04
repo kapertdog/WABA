@@ -1,1 +1,0 @@
-".\venv\Scripts\pip.exe" install -r %appdata%\waba\requirements.txt

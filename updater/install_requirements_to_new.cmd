@@ -1,6 +1,0 @@
-echo Off
-cls
-echo ## Creating new venv...
-py -m venv ".\venv"
-echo ## Installing requirements...
-".\venv\Scripts\pip.exe" install -r %appdata%\waba\requirements.txt

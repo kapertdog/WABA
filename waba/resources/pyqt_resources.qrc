@@ -1,0 +1,66 @@
+<RCC>
+  <qresource prefix="waba">
+    <file>logo2_release.png</file>
+    <file>waba_title.png</file>
+  </qresource>
+  <qresource prefix="google">
+    <file>google/sensors_off_FILL0_wght200_GRAD0_opsz48.svg</file>
+    <file>google/sensors_FILL0_wght200_GRAD0_opsz48.svg</file>
+    <file>google/party_mode_FILL0_wght200_GRAD0_opsz48.svg</file>
+    <file>google/no_photography_FILL0_wght200_GRAD0_opsz48.svg</file>
+    <file>google/add_a_photo_FILL0_wght200_GRAD0_opsz48.svg</file>
+    <file>google/auto_videocam_FILL0_wght200_GRAD0_opsz48.svg</file>
+    <file>google/cameraswitch_FILL0_wght200_GRAD0_opsz48.svg</file>
+    <file>google/photo_camera_FILL0_wght200_GRAD0_opsz48.svg</file>
+    <file>google/desktop_access_disabled_FILL0_wght200_GRAD0_opsz48.svg</file>
+    <file>google/monitor_FILL0_wght200_GRAD0_opsz48.svg</file>
+    <file>google/display_settings_FILL0_wght200_GRAD0_opsz48.svg</file>
+    <file>google/123_FILL0_wght200_GRAD0_opsz48.svg</file>
+    <file>google/auto_mode_FILL0_wght200_GRAD0_opsz48.svg</file>
+    <file>google/block_FILL0_wght200_GRAD0_opsz48.svg</file>
+    <file>google/brightness_auto_FILL0_wght200_GRAD0_opsz48.svg</file>
+    <file>google/browse_activity_FILL0_wght200_GRAD0_opsz48.svg</file>
+    <file>google/check_box_FILL0_wght200_GRAD0_opsz48.svg</file>
+    <file>google/check_box_outline_blank_FILL0_wght200_GRAD0_opsz48.svg</file>
+    <file>google/chronic_FILL0_wght200_GRAD0_opsz48.svg</file>
+    <file>google/close_FILL0_wght200_GRAD0_opsz48.svg</file>
+    <file>google/create_new_folder_FILL0_wght200_GRAD0_opsz48.svg</file>
+    <file>google/data_alert_FILL0_wght200_GRAD0_opsz48.svg</file>
+    <file>google/data_check_FILL0_wght200_GRAD0_opsz48.svg</file>
+    <file>google/data_info_alert_FILL0_wght200_GRAD0_opsz48.svg</file>
+    <file>google/data_thresholding_FILL0_wght200_GRAD0_opsz48.svg</file>
+    <file>google/delete_FILL0_wght200_GRAD0_opsz48.svg</file>
+    <file>google/done_FILL0_wght200_GRAD0_opsz48.svg</file>
+    <file>google/fast_forward_FILL0_wght200_GRAD0_opsz48.svg</file>
+    <file>google/install_desktop_FILL0_wght200_GRAD0_opsz48.svg</file>
+    <file>google/more_horiz_FILL0_wght200_GRAD0_opsz48.svg</file>
+    <file>google/more_vert_FILL0_wght200_GRAD0_opsz48.svg</file>
+    <file>google/new_window_FILL0_wght200_GRAD0_opsz48.svg</file>
+    <file>google/open_in_new_FILL0_wght200_GRAD0_opsz48.svg</file>
+    <file>google/quick_reference_FILL0_wght200_GRAD0_opsz48.svg</file>
+    <file>google/refresh_FILL0_wght200_GRAD0_opsz48.svg</file>
+    <file>google/running_with_errors_FILL0_wght200_GRAD0_opsz48.svg</file>
+    <file>google/save_FILL0_wght200_GRAD0_opsz48.svg</file>
+    <file>google/schedule_FILL0_wght200_GRAD0_opsz48.svg</file>
+    <file>google/settings_brightness_FILL0_wght200_GRAD0_opsz48.svg</file>
+    <file>google/settings_FILL0_wght200_GRAD0_opsz48.svg</file>
+    <file>google/sync_FILL0_wght200_GRAD0_opsz48.svg</file>
+    <file>google/terminal_FILL0_wght200_GRAD0_opsz48.svg</file>
+    <file>google/timer_3_FILL0_wght200_GRAD0_opsz48.svg</file>
+    <file>google/timer_10_FILL0_wght200_GRAD0_opsz48.svg</file>
+    <file>google/timer_FILL0_wght200_GRAD0_opsz48.svg</file>
+    <file>google/timer_off_FILL0_wght200_GRAD0_opsz48.svg</file>
+    <file>google/toggle_off_FILL0_wght200_GRAD0_opsz48.svg</file>
+    <file>google/toggle_on_FILL0_wght200_GRAD0_opsz48.svg</file>
+    <file>google/update_FILL0_wght200_GRAD0_opsz48.svg</file>
+  </qresource>
+  <qresource prefix="icons">
+    <file>take_photo.png</file>
+    <file>twitter_logo.png</file>
+    <file>youtube_logo.png</file>
+    <file>github_logo.png</file>
+    <file>linktree_logo.png</file>
+    <file>sync_dark.png</file>
+    <file>settings_brightness.png</file>
+  </qresource>
+</RCC>

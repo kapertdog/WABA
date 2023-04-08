@@ -1,6 +1,9 @@
 ## Base
 - [ ] Rework settings storage
 - [ ] Use gettext as language loader
+- [ ] Centralize app info data
+- [ ] Prepare everything to auto-building
+- [ ] 
 
 ## Features
 - [ ] 

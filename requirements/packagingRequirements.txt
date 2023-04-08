@@ -8,11 +8,11 @@ ttkbootstrap
 keyboard
 imageio
 imageio-ffmpeg
-psutil
+# psutil
 PyYAML
 pystray
 pyinstaller_versionfile
 requests
-progress
+# progress
 screen-brightness-control
 auto-py-to-exe

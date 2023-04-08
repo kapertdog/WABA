@@ -2,7 +2,7 @@ Pillow
 keyboard
 imageio
 imageio-ffmpeg
-psutil
+# psutil
 PyYAML
 pystray
 requests

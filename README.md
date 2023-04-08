@@ -21,7 +21,7 @@ Linux / MacOS:
 
 
 ## Installation guide
-1. Go to [releases](./releases)
+1. Go to [releases](https://github.com/kapertdog/WABA/releases)
 2. Chose version (lastest **release** recommended)
 3. Follow instruction in release description
 
@@ -31,18 +31,13 @@ Linux / MacOS:
 -->
 
 ## Build guide
-1. Download and install Python 3.10 or newer
-2. Download and unpack repository-zip 
-3. ...
+1. ...
 
 ## Credits / Licenses
 This project uses next packets:
 - **pls don't forget to fill this up**
 
 And also next resources:
-- Default icons set: ...
-- [Google icons set](https://fonts.google.com/icons) 
-([licence](https://developers.google.com/fonts/docs/material_symbols?hl=ru#licensing))
 - ...
 
 ## Badges

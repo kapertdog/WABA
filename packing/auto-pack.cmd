@@ -1,0 +1,1 @@
+".\..\venv\Scripts\auto-py-to-exe.exe" -nu -c config.json -o ".\..\output\waba\"

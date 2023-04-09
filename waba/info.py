@@ -33,6 +33,9 @@ greek_names = (
     "epsilon"
 )
 
+version_warning = "\n" "# Following semver.org" \
+                  "\n" "# Yes it's reading version from there"
+
 
 @dataclass
 class Version:
@@ -51,18 +54,21 @@ class Version:
             case "both":
                 return (text % self.__dict__).format(**self.__dict__)
 
-    def write(self, filename: str = "version"):
-        with open(filename, "w+", encoding="utf-8") as file:
-            file.write(self.__str__())
+    def read(self, semver_text: str):
+        if "+" in semver_text:
+            semver_text, self.build = semver_text.split("+")
+        if "-" in semver_text:
+            semver_text, self.codename = semver_text.split("-")
+        self.major, self.minor, self.patch = semver_text.split(".")
+        return self
 
-    def load(self, filename: str = "version"):
+    def write(self, filename: str = version_path):
+        with open(filename, "w+", encoding="utf-8") as file:
+            file.write(self.__str__() + version_warning)
+
+    def load(self, filename: str = version_path):
         with open(filename, "r+", encoding="utf-8") as file:
-            data = file.read()
-        if "+" in data:
-            data, self.build = data.split("+")
-        if "-" in data:
-            data, self.codename = data.split("-")
-        self.major, self.minor, self.patch = data.split(".")
+            self.read(file.readline())
 
     def semver(self):
         return f"{self.major}.{self.minor}.{self.patch}"
@@ -71,6 +77,26 @@ class Version:
         return self.semver() + (
             f"-{self.codename}" if self.codename else "") + (
             f"+{self.build}" if self.build else "")
+
+    def __setitem__(self, key: str, value: int | str):
+        self.__dict__[key] = value
+        # match key, value is int:
+        #     case "build", True:
+        #         self.patch = value
+        #     case "patch", True:
+        #         self.patch = value
+        #     case "minor", True:
+        #         self.minor = value
+        #     case "major", True:
+        #         self.major = value
+        #     case "codename", False:
+        #         self.patch = value
+        #     case _:
+        #         return False
+        # return True
+
+    def __copy__(self):
+        return Version(*self.__dict__)
 
 
 """
@@ -87,24 +113,11 @@ if version_path.exists():
 """
 
 
-def increase(name: str, value: str):
-
-    print(f"Are you sure wanna increase {name} to {value}?")
-    print("")
-    if input("Y/N >> ").lower() in ("y", "yes"):
-        ...
-    else:
-        ...
-    ...
-
-# info.py -i patch
-
-
 if __name__ == '__main__':
+
     parser = argparse.ArgumentParser(
         description="Centralizing app info in one place",
 
     )
-    parser.add_argument()
     args = parser.parse_args()
     ...

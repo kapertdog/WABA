@@ -2,7 +2,7 @@
     comment
 """
 import sys
-import cli
+import info
 
 """
     Main

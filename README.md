@@ -1,4 +1,4 @@
-## WABA (Windows Automatic Brightness Adjustment)
+## WABA (Automatic brightness adjustment tool)
 Uses your camera or hand-made light sensor to autocorrect display's brightness
 
 > Still in dev, but here some plans to do: [TODO.md](TODO.md)

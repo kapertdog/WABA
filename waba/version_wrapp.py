@@ -6,7 +6,7 @@ import info
 def wrapp():
     pyinstaller_versionfile.create_versionfile(
         output_file=info.versionfile_path,
-        version=info.version.semver(),
+        version=info.version.win_ver(),
         company_name=info.company,
         file_description=info.description,
         internal_name=info.shortname,

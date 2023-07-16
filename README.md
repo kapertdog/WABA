@@ -1,26 +1,29 @@
 ## WABA (Automatic brightness adjustment tool)
-Uses your camera or hand-made light sensor to autocorrect display's brightness
+~~Uses your camera or hand-made light sensor to autocorrect display's brightness~~
 
-> Still in dev, but here some plans to do: [TODO.md](TODO.md)
+Python-based automatisation tool targeted to display's brightness adjustment 
+
+> Still in `dev`, but here some plans to do: [TODO.md](TODO.md)
 
 ## Screenshots
 ...
 
-## Hardware requirements
+## Hardware requirements 
+Match Python 3.11 requirements
+
 Windows:
-- Windows 7 or newer
-- x32 / x86 compatible processor _(not tested on arm yet)_
-- \> 50MB RAM
+- Windows 8 or newer
+- x64 / x86 compatible processor _(not tested on arm yet)_
+- \> 4 GB RAM
 - ~200MiB hardware space _(and ~150MiB more while self updating, turned off by default)_
-- at least one sensor device:
-  - fmpeg / Imageio / OpenCV compatible camera
-  - web-socket / COM serial port compatible device with luminance sensor
 
 Linux / MacOS:
 - _not tested yet_
 
 
 ## Installation guide
+> ⚠ There's only first concept pre-releases (dev_a and dev_b) available right now,
+> they are deprecated and will not be compatible with current version.
 1. Go to [releases](https://github.com/kapertdog/WABA/releases)
 2. Chose version (lastest **release** recommended)
 3. Follow instruction in release description
@@ -30,15 +33,14 @@ Linux / MacOS:
 > way to centralize auto-updating for some my projects!
 -->
 
+## Contribution
+...
+
 ## Build guide
-1. ...
+...
 
 ## Credits / Licenses
-This project uses next packets:
-- **pls don't forget to fill this up**
-
-And also next resources:
-- ...
+...
 
 ## Badges
 

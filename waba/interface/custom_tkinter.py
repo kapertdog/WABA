@@ -426,7 +426,7 @@ class App(ctk.CTk):
         self.tab_manager.pack(side=ctk.LEFT, padx=(10, 5), pady=10)
 
         if show_pictures:
-            image = Image.open("resources/waba_title.png")
+            image = Image.open("../resources/waba_title.png")
             self.waba_logo = ImageTk.PhotoImage(image)
             # self.waba_logo = ctk.CTkImage(image)
             # self.waba_logo = ctk.CTkImage(
@@ -514,7 +514,7 @@ class App(ctk.CTk):
         ...
 
         self.open_main()
-        self.iconbitmap("resources/logo2.ico")
+        # self.iconbitmap("../resources/logo2.ico")
         # self.protocol('WM_DELETE_WINDOW', self.iconify)
 
     def submit(self):
@@ -574,8 +574,6 @@ class App(ctk.CTk):
 
 if __name__ == "__main__":
     import os
-    os.chdir("..")
-    import dev_b
 
-    app = App(dev_b.lang, dev_b.SettingsProvider(), dev_b.VersionProvider(), None)
+    app = App(None, None, None, None)
     app.mainloop()

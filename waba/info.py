@@ -1,5 +1,6 @@
 """
-just "about" with auto-generators for internal use
+    just "about" with auto-generators for internal use but
+    this supposes to be info-data storage standards and utilities
 """
 from dataclasses import dataclass
 from pathlib import Path
@@ -24,6 +25,8 @@ versionfile_path = Path("../packing/versionfile.txt")
 """
     GENERATORS
 """
+
+is_portable = Path("./info/.portable").exists()
 
 greek_names = (
     "alpha",
@@ -68,10 +71,13 @@ class Version:
 
     def load(self, filename: str = version_path):
         with open(filename, "r+", encoding="utf-8") as file:
-            self.read(file.readline())
+            self.read(file.readline().rstrip("\n"))
 
     def semver(self):
         return f"{self.major}.{self.minor}.{self.patch}"
+
+    def win_ver(self):
+        return f"{self.semver()}.{self.build}"
 
     def __str__(self):
         return self.semver() + (
@@ -80,20 +86,6 @@ class Version:
 
     def __setitem__(self, key: str, value: int | str):
         self.__dict__[key] = value
-        # match key, value is int:
-        #     case "build", True:
-        #         self.patch = value
-        #     case "patch", True:
-        #         self.patch = value
-        #     case "minor", True:
-        #         self.minor = value
-        #     case "major", True:
-        #         self.major = value
-        #     case "codename", False:
-        #         self.patch = value
-        #     case _:
-        #         return False
-        # return True
 
     def __copy__(self):
         return Version(*self.__dict__)
@@ -102,6 +94,8 @@ class Version:
 """
     Preparing
 """
+# NOTE: This module not suppose to execute anything, operations like
+# version file loading need to be implemented only as callable from main class functions
 
 version = Version()
 
@@ -116,7 +110,7 @@ if version_path.exists():
 if __name__ == '__main__':
 
     parser = argparse.ArgumentParser(
-        description="Centralizing app info in one place",
+        description=__doc__,
 
     )
     args = parser.parse_args()

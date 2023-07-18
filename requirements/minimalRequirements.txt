@@ -1,9 +1,15 @@
-Pillow
-keyboard
+### Auto-update requirements
+# progress
+requests
+
+### Built-in plugins requirements
 imageio
 imageio-ffmpeg
+Pillow
+screen-brightness-control
+
+### Minimal Functional
+# keyboard
 # psutil
 PyYAML
 pystray
-requests
-screen-brightness-control

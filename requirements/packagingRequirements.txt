@@ -1,18 +1,28 @@
-Pillow
-PyQt6
-pyqtgraph
-pyqtdarktheme
-customtkinter
-sv-ttk
-ttkbootstrap
-keyboard
+### Interfaces
+# PyQt6
+# pyqtgraph
+# pyqtdarktheme
+# customtkinter
+# sv-ttk
+# ttkbootstrap
+dearpygui
+
+### Packaging
+auto-py-to-exe
+pyinstaller_versionfile
+
+### Auto-update requirements
+# progress
+requests
+
+### Built-in plugins requirements
 imageio
 imageio-ffmpeg
+Pillow
+screen-brightness-control
+
+### Minimal Functional
+# keyboard
 # psutil
 PyYAML
 pystray
-pyinstaller_versionfile
-requests
-# progress
-screen-brightness-control
-auto-py-to-exe
